@@ -583,20 +583,21 @@ function BroadcastPage({ selected }) {
 
   const doStart = async () => {
     if (!selected.length || (!message.trim() && !attachment)) return;
+    let file_id = null;
     if (attachment) {
       const fd = new FormData();
-      fd.append('chat_ids', JSON.stringify(selected));
-      fd.append('message', message);
-      fd.append('delay', delay);
-      fd.append('random_delay', randomDelay);
-      fd.append('max_per_minute', maxPerMin);
       fd.append('file', attachment, attachment.name);
-      await api.upload('/api/broadcast/start', fd);
-    } else {
-      await api.post('/api/broadcast/start', {
-        chat_ids: selected, message, delay, random_delay: randomDelay, max_per_minute: maxPerMin
-      });
+      const uploaded = await api.upload('/api/upload', fd);
+      file_id = uploaded.file_id ?? uploaded.id ?? uploaded.url ?? null;
     }
+    await api.post('/api/broadcast/start', {
+      chat_ids: selected,
+      message,
+      delay,
+      random_delay: randomDelay,
+      max_per_minute: maxPerMin,
+      ...(file_id !== null && { file_id }),
+    });
     startPoll();
   };
 
