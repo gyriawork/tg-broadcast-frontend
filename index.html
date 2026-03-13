@@ -785,7 +785,7 @@ function App() {
         </div>
       </div>
       <div className="nav">
-        {[['chats','📂 Chats'], ['broadcast','ð Ð Ð°ÑÑÑÐ»ÐºÐ°'+(selected.length?` (${selected.length})`:'')], ['history','📜 History']].map(([k,l]) => (
+        {[['chats','📂 Chats'], ['broadcast','🚀 Broadcast'+(selected.length?` (${selected.length})`:'')], ['history','📜 History']].map(([k,l]) => (
           <button key={k} className={`nav-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
