@@ -244,11 +244,16 @@ function getApiBase() {
 }
 let API_BASE = getApiBase();
 
+function getSessionToken() { return sessionStorage.getItem('session_token') || ''; }
+function sessionHeaders(extra) {
+  const t = getSessionToken();
+  return t ? { ...extra, 'X-Session-Token': t } : extra;
+}
 const api = {
-  get: (path) => fetch(API_BASE + path).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
-  post: (path, body) => fetch(API_BASE + path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
-  upload: (path, formData) => fetch(API_BASE + path, { method:'POST', body: formData }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
-  del: (path) => fetch(API_BASE + path, { method:'DELETE' }).then(r => r.json()),
+  get: (path) => fetch(API_BASE + path, { headers: sessionHeaders({}) }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
+  post: (path, body) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  upload: (path, formData) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({}), body: formData }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  del: (path) => fetch(API_BASE + path, { method:'DELETE', headers: sessionHeaders({}) }).then(r => r.json()),
 };
 
 function SettingsScreen({ onSave }) {
@@ -552,11 +557,11 @@ function AttachmentPreview({ file, onRemove }) {
 
   const fileIcon = () => {
     if (isImage) return null;
-    if (file.type === 'application/pdf') return 'Ã°ÂÂÂ';
-    if (file.type.includes('zip') || file.type.includes('rar')) return 'Ã°ÂÂÂÃ¯Â¸Â';
-    if (file.type.includes('video')) return 'Ã°ÂÂÂ¬';
-    if (file.type.includes('audio')) return 'Ã°ÂÂÂµ';
-    return 'Ã°ÂÂÂ';
+    if (file.type === 'application/pdf') return 'ÃÂ°ÃÂÃÂÃÂ';
+    if (file.type.includes('zip') || file.type.includes('rar')) return 'ÃÂ°ÃÂÃÂÃÂÃÂ¯ÃÂ¸ÃÂ';
+    if (file.type.includes('video')) return 'ÃÂ°ÃÂÃÂÃÂ¬';
+    if (file.type.includes('audio')) return 'ÃÂ°ÃÂÃÂÃÂµ';
+    return 'ÃÂ°ÃÂÃÂÃÂ';
   };
 
   return (
@@ -756,10 +761,10 @@ function BroadcastPage({ selected }) {
           const safe = delay >= 15 && maxPerMin <= 5;
           const danger = delay < 5 || maxPerMin > 15;
           const warn = !safe && !danger && (delay < 8 || maxPerMin > 10);
-          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">✅</span><div className="risk-text"><div className="risk-title">Safe mode — low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
-          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">🚫</span><div className="risk-text"><div className="risk-title">High risk — ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay ≥ 8s, max ≤ 10/min.</div></div></div>;
-          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">⚠️</span><div className="risk-text"><div className="risk-title">Moderate risk — use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
-          return <div className="risk-box risk-safe"><span className="risk-icon">✅</span><div className="risk-text"><div className="risk-title">Normal mode — acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
+          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">â</span><div className="risk-text"><div className="risk-title">Safe mode â low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
+          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">ð«</span><div className="risk-text"><div className="risk-title">High risk â ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay â¥ 8s, max â¤ 10/min.</div></div></div>;
+          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">â ï¸</span><div className="risk-text"><div className="risk-title">Moderate risk â use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
+          return <div className="risk-box risk-safe"><span className="risk-icon">â</span><div className="risk-text"><div className="risk-title">Normal mode â acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
         })()}
 
         <div className="toggle-row" style={{marginTop:14}}>
@@ -769,7 +774,7 @@ function BroadcastPage({ selected }) {
             <span className="toggle-slider"/>
           </label>
         </div>
-        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}–{delay+10}s between messages</div>}
+        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}â{delay+10}s between messages</div>}
       </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
