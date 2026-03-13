@@ -263,21 +263,19 @@ body::before {
 const { useState, useEffect, useRef, useCallback } = React;
 
 function getApiBase() {
-  let base = sessionStorage.getItem('api_base');
-  if (base) return base;
-  return 'http://localhost:8000';
+  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || '';
 }
 let API_BASE = getApiBase();
 
 // ─── App auth (JWT) ──────────────────────────────────────────────────────────
-function getAppToken() { return sessionStorage.getItem('app_token') || ''; }
-function setAppToken(t) { sessionStorage.setItem('app_token', t); }
-function clearAppToken() { sessionStorage.removeItem('app_token'); }
+function getAppToken() { return localStorage.getItem('app_token') || ''; }
+function setAppToken(t) { localStorage.setItem('app_token', t); }
+function clearAppToken() { localStorage.removeItem('app_token'); }
 function getAppUser() {
-  try { return JSON.parse(sessionStorage.getItem('app_user') || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem('app_user') || 'null'); } catch { return null; }
 }
-function setAppUserData(u) { sessionStorage.setItem('app_user', JSON.stringify(u)); }
-function clearAppUserData() { sessionStorage.removeItem('app_user'); }
+function setAppUserData(u) { localStorage.setItem('app_user', JSON.stringify(u)); }
+function clearAppUserData() { localStorage.removeItem('app_user'); }
 
 function getSessionToken() { return localStorage.getItem('tgb_session_token') || sessionStorage.getItem('session_token') || ''; }
 function setSessionToken(t) { localStorage.setItem('tgb_session_token', t); sessionStorage.setItem('session_token', t); }
@@ -320,7 +318,7 @@ function SettingsScreen({ onSave }) {
 
   const save = () => {
     const clean = url.replace(/\/$/, '');
-    sessionStorage.setItem('api_base', clean);
+    localStorage.setItem('api_base', clean); sessionStorage.setItem('api_base', clean);
     API_BASE = clean;
     onSave();
   };
@@ -1660,7 +1658,7 @@ function App() {
   const [tab, setTab] = useState('chats');
   const [selected, setSelected] = useState([]);
   const [checkingTg, setCheckingTg] = useState(false);
-  const [showSettings, setShowSettings] = useState(!sessionStorage.getItem('api_base'));
+  const [showSettings, setShowSettings] = useState(!(localStorage.getItem('api_base') || sessionStorage.getItem('api_base')));
   const [showAdmin, setShowAdmin] = useState(false);
 
   const tryAutoTgLogin = useCallback(async () => {
