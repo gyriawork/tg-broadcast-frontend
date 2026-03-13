@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TG Broadcast</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0e1520;--surface2:#152030;--border:#1e3040;--accent:#00d4ff;--accent2:#0090cc;--green:#00ff88;--red:#ff4466;--text:#c8dde8;--muted:#4a6070;--radius:6px}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px}
+#root{min-height:100vh;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent)}
+.nav{display:flex;gap:2px;padding:12px 28px;border-bottom:1px solid var(--border);background:var(--bg)}
+.nav-btn{padding:6px 16px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.nav-btn:hover{color:var(--text);background:var(--surface)}.nav-btn.active{color:var(--accent);background:var(--surface);border-bottom:2px solid var(--accent)}
+.main{flex:1;display:flex;overflow:hidden}.page{flex:1;padding:28px;overflow-y:auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:16px}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
+label{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;margin-top:14px}
+input,textarea{width:100%;padding:10px 12px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:13px;outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}textarea{resize:vertical;min-height:100px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:500;transition:all .2s}
+.btn-primary{background:var(--accent);color:var(--bg)}.btn-primary:hover{background:#00b8e0}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:var(--red);color:#fff}.btn:disabled{opacity:.4;cursor:not-allowed}.btn-sm{padding:6px 12px;font-size:11px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.toggle{position:relative;width:40px;height:22px}.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:11px;cursor:pointer;transition:.3s}
+.toggle-slider:before{position:absolute;content:'';height:16px;width:16px;left:3px;bottom:3px;background:var(--muted);border-radius:50%;transition:.3s}
+input:checked+.toggle-slider{background:var(--accent2)}input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--accent)}
+.chat-list{max-height:420px;overflow-y:auto}
+.chat-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.chat-item:hover{border-color:var(--accent2);background:var(--surface2)}.chat-item.selected{border-color:var(--accent);background:rgba(0,212,255,.06)}
+.chat-avatar{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;flex-shrink:0}
+.chat-avatar.group{background:rgba(0,212,255,.15);color:var(--accent)}.chat-avatar.channel{background:rgba(0,144,204,.15);color:var(--accent2)}
+.chat-info{flex:1;min-width:0}.chat-name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-check{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.chat-item.selected .chat-check{background:var(--accent);border-color:var(--accent)}
+.progress-bar{width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:12px 0}
+.progress-fill{height:100%;background:var(--accent);transition:width .3s}
+.stats-row{display:flex;gap:16px;margin:12px 0}
+.stat{flex:1;text-align:center;padding:10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)}
+.stat-val{font-size:24px;font-family:'Syne',sans-serif;font-weight:800}
+.val-green{color:var(--green)}.val-red{color:var(--red)}.val-blue{color:var(--accent)}
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;line-height:1.7;max-height:260px;overflow-y:auto}
+.login-wrap{max-width:440px;margin:60px auto}.login-hero{text-align:center;margin-bottom:32px}
+.login-hero h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--accent)}
+.login-hero p{color:var(--muted);margin-top:8px;font-size:12px}
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-top:12px}
+.alert-err{background:rgba(255,68,102,.1);border:1px solid rgba(255,68,102,.3);color:var(--red)}
+.alert-ok{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--green)}
+.alert-info{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--accent)}
+.sidebar{width:280px;background:var(--surface);border-left:1px solid var(--border);padding:20px;overflow-y:auto}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px}
+.badge-blue{background:rgba(0,212,255,.15);color:var(--accent)}.badge-green{background:rgba(0,255,136,.12);color:var(--green)}.badge-red{background:rgba(255,68,102,.12);color:var(--red)}
+table{width:100%;border-collapse:collapse}th{font-size:10px;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px}tr:hover td{background:var(--surface2)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.row-gap{display:flex;gap:10px;align-items:flex-end;margin-top:14px}
+.sep{height:1px;background:var(--border);margin:16px 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+.header-logo{display:flex;align-items:center;gap:10px}.logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.header-user{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.selected-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.current-tag{font-size:11px;color:var(--accent);padding:3px 8px;border:1px solid var(--accent2);border-radius:4px}
+</style></head><body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const {useState,useEffect,useRef,useCallback}=React;
+function getApiBase(){return sessionStorage.getItem('api_base')||'http://localhost:8000';}
+let API_BASE=getApiBase();
+const api={
+  get:p=>fetch(API_BASE+p).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}),
+  post:(p,b)=>fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>{if(!r.ok)return r.json().then(e=>{throw new Error(e.detail||r.status);});return r.json();}),
+  del:p=>fetch(API_BASE+p,{method:'DELETE'}).then(r=>r.json())
+};
+const E=React.createElement;
+function SettingsScreen({onSave}){
+  const[url,setUrl]=useState(API_BASE);
+  const[testing,setTesting]=useState(false);
+  const[err,setErr]=useState('');
+  const[ok,setOk]=useState(false);
+  const test=async()=>{setTesting(true);setErr('');setOk(false);try{const r=await fetch(url.replace(//$/,'')+'/health');r.ok?setOk(true):setErr('Ошибка: '+r.status);}catch(e){setErr('Не удалось подключиться');}setTesting(false);};
+  const save=()=>{const c=url.replace(//$/,'');sessionStorage.setItem('api_base',c);API_BASE=c;onSave();};
+  return E('div',{className:'login-wrap'},
+    E('div',{className:'login-hero'},E('h1',null,'📡 TG Broadcast'),E('p',null,'Укажи адрес бэкенда Railway')),
+    E('div',{className:'card'},
+      E('div',{className:'card-title'},'🌐 Backend URL'),
+      E('p',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:12}},'Скопируй URL из Railway → Settings → Domains'),
+      E('label',null,'URL'),
+      E('input',{type:'text',placeholder:'https://web-production-xxx.up.railway.app',value:url,onChange:e=>setUrl(e.target.value)}),
+      err&&E('div',{className:'alert alert-err'},err),
+      ok&&E('div',{className:'alert alert-ok'},'✅ Сервер доступен!'),
+      E('div',{className:'row-gap'},
+        E('button',{className:'btn btn-secondary',onClick:test,disabled:testing||!url},testing?E(React.Fragment,null,E('span',{className:'spinner'}),' Проверка...'):'🔍 Проверить'),
+        E('button',{className:'btn btn-primary',onClick:save,disabled:!url},'Сохранить →'))),
+    E('div',{style:{textAlign:'center',marginTop:12}},
+      E('span',{style:{fontSize:11,color:'var(--muted)'}},'Railway URL: '),
+      E('span',{style:{fontSize:11,color:'var(--accent)'}},'https://web-production-b8b8b.up.railway.app')));
+}
+function LoginPage({onAuth}){
+  const[step,setStep]=useState('config');
+  const[apiId,setApiId]=useState('');
+  const[apiHash,setApiHash]=useState('');
+  const[phone,setPhone]=useState('');
+  const[code,setCode]=useState('');
+  const[password,setPassword]=useState('');
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState('');
+  const[msg,setMsg]=useState('');
+  const doConnect=async()=>{setLoading(true);setErr('');try{const r=await api.post('/api/connect',{api_id:parseInt(apiId),api_hash:apiHash});if(r.authorized){const me=await api.get('/api/me');onAuth(me);}else setStep('phone');}catch(e){setErr('Ошибка: '+e.message);}setLoading(false);};
+  const doPhone=async()=>{setLoading(true);setErr('');try{await api.post('/api/send_code',{phone});setStep('code');setMsg('Код отправлен!');}catch(e){setErr('Ошибка');}setLoading(false);};
+  const doCode=async()=>{setLoading(true);setErr('');try{const r=await api.post('/api/verify_code',{code,password:password||null});if(r.authorized)onAuth(r);}catch(e){setErr('Неверный код');}setLoading(false);};
+  return E('div',{className:'login-wrap'},
+    E('div',{className:'login-hero'},E('h1',null,'📡 TG Broadcast'),E('p',null,'Telegram broadcast via Telethon')),
+    step==='config'&&E('div',{className:'card'},
+      E('div',{className:'card-title'},'🔑 API Credentials'),
+      E('p',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:12}},E('a',{href:'https://my.telegram.org',target:'_blank',style:{color:'var(--accent)'}},'my.telegram.org'),' → API development tools'),
+      E('label',null,'API ID'),E('input',{type:'text',value:apiId,onChange:e=>setApiId(e.target.value),placeholder:'12345678'}),
+      E('label',null,'API Hash'),E('input',{type:'text',value:apiHash,onChange:e=>setApiHash(e.target.value),placeholder:'abc123...'}),
+      err&&E('div',{className:'alert alert-err'},err),
+      E('div',{style:{marginTop:16}},E('button',{className:'btn btn-primary',onClick:doConnect,disabled:loading||!apiId||!apiHash},loading?E(React.Fragment,null,E('span',{className:'spinner'}),' ...'):'→ Подключить'))),
+    step==='phone'&&E('div',{className:'card'},
+      E('div',{className:'card-title'},'📱 Телефон'),
+      E('label',null,'Номер'),E('input',{type:'tel',value:phone,onChange:e=>setPhone(e.target.value),placeholder:'+79001234567'}),
+      err&&E('div',{className:'alert alert-err'},err),
+      E('div',{className:'row-gap'},E('button',{className:'btn btn-secondary btn-sm',onClick:()=>setStep('config')},'← Назад'),E('button',{className:'btn btn-primary',onClick:doPhone,disabled:loading||!phone},loading?'...':'Отправить код →'))),
+    (step==='code'||step==='2fa')&&E('div',{className:'card'},
+      E('div',{className:'card-title'},step==='2fa'?'🔐 Пароль 2FA':'📨 Код'),
+      msg&&E('div',{className:'alert alert-info',style:{marginBottom:12}},msg),
+      step==='code'&&E(React.Fragment,null,E('label',null,'Код из Telegram'),E('input',{type:'text',value:code,onChange:e=>setCode(e.target.value),placeholder:'12345'})),
+      E('label',null,'Пароль 2FA'),E('input',{type:'password',value:password,onChange:e=>setPassword(e.target.value),placeholder:'••••••••'}),
+      err&&E('div',{className:'alert alert-err'},err),
+      E('div',{className:'row-gap'},E('button',{className:'btn btn-secondary btn-sm',onClick:()=>setStep('phone')},'← Назад'),E('button',{className:'btn btn-primary',onClick:doCode,disabled:loading||!code},loading?'...':'Войти →'))));
+}
+function ChatsPage({selected,setSelected}){
+  const[chats,setChats]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[search,setSearch]=useState('');
+  const[lists,setLists]=useState([]);
+  const[saveListName,setSaveListName]=useState('');
+  const[msg,setMsg]=useState('');
+  const[err,setErr]=useState('');
+  useEffect(()=>{api.get('/api/lists').then(r=>setLists(r.lists||[])).catch(()=>{});},[]);
+  const loadChats=async()=>{setLoading(true);setErr('');try{const r=await api.get('/api/chats');setChats(r.chats);}catch(e){setErr('Ошибка загрузки');}setLoading(false);};
+  const toggle=id=>setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const filtered=chats.filter(c=>c.name.toLowerCase().includes(search.toLowerCase()));
+  const loadLists=()=>api.get('/api/lists').then(r=>setLists(r.lists||[]));
+  return E('div',{className:'main'},
+    E('div',{className:'page'},
+      E('div',{className:'card'},
+        E('div',{className:'card-title'},'📂 Загрузка чатов'),
+        E('div',{style:{display:'flex',gap:10}},
+          E('button',{className:'btn btn-primary',onClick:loadChats,disabled:loading},loading?E(React.Fragment,null,E('span',{className:'spinner'}),' Загрузка...'):'⟳ Загрузить мои чаты'),
+          chats.length>0&&E('span',{style:{color:'var(--muted)',alignSelf:'center',fontSize:12}},chats.length+' чатов')),
+        err&&E('div',{className:'alert alert-err',style:{marginTop:10}},err)),
+      chats.length>0&&E('div',{className:'card'},
+        E('div',{className:'selected-bar'},
+          E('div',{className:'card-title',style:{marginBottom:0}},'Выбор ',E('span',{className:'badge badge-blue',style:{marginLeft:8}},selected.length+' выбрано')),
+          E('div',{style:{display:'flex',gap:8}},
+            E('button',{className:'btn btn-secondary btn-sm',onClick:()=>setSelected(filtered.map(c=>c.id))},'Все'),
+            E('button',{className:'btn btn-secondary btn-sm',onClick:()=>setSelected([])},'Сброс'))),
+        E('input',{type:'text',placeholder:'🔍 Поиск...',value:search,onChange:e=>setSearch(e.target.value),style:{marginBottom:10}}),
+        E('div',{className:'chat-list'},filtered.map(c=>
+          E('div',{key:c.id,className:'chat-item'+(selected.includes(c.id)?' selected':''),onClick:()=>toggle(c.id)},
+            E('div',{className:'chat-avatar '+c.type},c.name.charAt(0).toUpperCase()),
+            E('div',{className:'chat-info'},
+              E('div',{className:'chat-name'},c.name),
+              E('div',{style:{fontSize:11,color:'var(--muted)',marginTop:2}},E('span',{className:'badge badge-'+(c.type==='channel'?'blue':'green')},c.type),c.members&&' '+c.members.toLocaleString()+' чел.')),
+            E('div',{className:'chat-check'},selected.includes(c.id)&&E('span',{style:{color:'var(--bg)',fontSize:12}},'✓'))))),
+        selected.length>0&&E('div',{style:{marginTop:14}},
+          E('div',{className:'sep'}),
+          E('div',{className:'row-gap'},
+            E('input',{type:'text',placeholder:'Название списка',value:saveListName,onChange:e=>setSaveListName(e.target.value),style:{flex:1}}),
+            E('button',{className:'btn btn-secondary btn-sm',onClick:async()=>{await api.post('/api/lists',{name:saveListName,chat_ids:selected});setSaveListName('');setMsg('Сохранено!');loadLists();setTimeout(()=>setMsg(''),2000);},disabled:!saveListName},'Сохранить')),
+          msg&&E('div',{className:'alert alert-ok',style:{marginTop:8}},msg)))),
+    E('div',{className:'sidebar'},
+      E('div',{style:{fontSize:11,color:'var(--muted)',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:12}},'💾 Списки'),
+      lists.length===0&&E('p',{style:{color:'var(--muted)',fontSize:12}},'Нет списков'),
+      lists.map(lst=>E('div',{key:lst.id,style:{marginBottom:10,padding:10,background:'var(--bg)',borderRadius:6,border:'1px solid var(--border)'}},
+        E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          E('span',{style:{fontSize:13}},lst.name),
+          E('button',{className:'btn btn-secondary btn-sm',style:{padding:'3px 8px',fontSize:10},onClick:()=>api.del('/api/lists/'+lst.id).then(loadLists)},'✕')),
+        E('div',{style:{fontSize:11,color:'var(--muted)',marginTop:4}},lst.chats.length+' чатов'),
+        E('button',{className:'btn btn-secondary btn-sm',style:{marginTop:8,width:'100%'},onClick:()=>setSelected(lst.chats)},'→ Загрузить')))));
+}
+function BroadcastPage({selected}){
+  const[message,setMessage]=useState('');
+  const[delay,setDelay]=useState(5);
+  const[randomDelay,setRandomDelay]=useState(false);
+  const[maxPerMin,setMaxPerMin]=useState(10);
+  const[status,setStatus]=useState(null);
+  const[polling,setPolling]=useState(false);
+  const logRef=useRef(null);
+  const pollRef=useRef(null);
+  useEffect(()=>{if(logRef.current)logRef.current.scrollTop=logRef.current.scrollHeight;},[status?.log]);
+  const startPoll=()=>{setPolling(true);pollRef.current=setInterval(async()=>{const s=await api.get('/api/broadcast/status');setStatus(s);if(!s.running&&s.finished){clearInterval(pollRef.current);setPolling(false);}},800);};
+  const doStart=async()=>{if(!selected.length||!message.trim())return;await api.post('/api/broadcast/start',{chat_ids:selected,message,delay,random_delay:randomDelay,max_per_minute:maxPerMin});startPoll();};
+  const progress=status?Math.round((status.sent+status.failed)/(status.total||1)*100):0;
+  return E('div',{className:'main'},
+    E('div',{className:'page'},
+      selected.length===0&&E('div',{className:'alert alert-info',style:{marginBottom:16}},'← Выбери чаты во вкладке Чаты'),
+      E('div',{className:'card'},
+        E('div',{className:'card-title'},'📨 Сообщение'),
+        E('textarea',{placeholder:'Текст рассылки...',value:message,onChange:e=>setMessage(e.target.value),style:{minHeight:130}}),
+        E('div',{style:{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}},message.length+' симв. · '+selected.length+' чатов')),
+      E('div',{className:'card'},
+        E('div',{className:'card-title'},'⚙️ Настройки'),
+        E('div',{className:'two-col'},
+          E('div',null,E('label',null,'Задержка (сек)'),E('input',{type:'number',min:1,max:600,value:delay,onChange:e=>setDelay(Number(e.target.value))})),
+          E('div',null,E('label',null,'Макс. в минуту'),E('input',{type:'number',min:1,max:30,value:maxPerMin,onChange:e=>setMaxPerMin(Number(e.target.value))}))),
+        E('div',{className:'toggle-row'},
+          E('span',null,'Случайная задержка (+0–10с)'),
+          E('label',{className:'toggle'},E('input',{type:'checkbox',checked:randomDelay,onChange:e=>setRandomDelay(e.target.checked)}),E('span',{className:'toggle-slider'})))),
+      E('div',{style:{display:'flex',gap:10}},
+        E('button',{className:'btn btn-primary',style:{flex:1,justifyContent:'center'},onClick:doStart,disabled:polling||!selected.length||!message.trim()},polling?E(React.Fragment,null,E('span',{className:'spinner'}),' Рассылка...'):'🚀 Начать рассылку ('+selected.length+' чатов)'),
+        polling&&E('button',{className:'btn btn-danger',onClick:()=>api.post('/api/broadcast/stop',{})},'⏹ Стоп')),
+      status&&E('div',{className:'card',style:{marginTop:16}},
+        E('div',{className:'card-title'},'📊 Прогресс'),
+        status.current_chat&&E('div',{style:{marginBottom:10,display:'flex',alignItems:'center',gap:8}},E('span',{className:'spinner'}),E('span',{className:'current-tag'},'Отправка: '+status.current_chat)),
+        E('div',{className:'progress-bar'},E('div',{className:'progress-fill',style:{width:progress+'%'}})),
+        E('div',{style:{textAlign:'right',fontSize:11,color:'var(--muted)',marginBottom:12}},progress+'% ('+( status.sent+status.failed)+'/'+status.total+')'),
+        E('div',{className:'stats-row'},
+          E('div',{className:'stat'},E('div',{className:'stat-val val-blue'},status.total),E('div',{style:{fontSize:10,color:'var(--muted)',textTransform:'uppercase'}},'Всего')),
+          E('div',{className:'stat'},E('div',{className:'stat-val val-green'},status.sent),E('div',{style:{fontSize:10,color:'var(--muted)',textTransform:'uppercase'}},'Отправлено')),
+          E('div',{className:'stat'},E('div',{className:'stat-val val-red'},status.failed),E('div',{style:{fontSize:10,color:'var(--muted)',textTransform:'uppercase'}},'Ошибок'))),
+        E('div',{className:'log-box',ref:logRef},(status.log||[]).map((l,i)=>E('div',{key:i,style:{padding:'1px 0'}},l)),
+          !status.running&&status.finished&&E('div',{style:{color:'var(--green)',marginTop:8}},'━━ РАССЫЛКА ЗАВЕРШЕНА ━━')))));
+}
+function HistoryPage(){
+  const[history,setHistory]=useState([]);
+  useEffect(()=>{api.get('/api/history').then(r=>setHistory(r.history||[])).catch(()=>{});},[]);
+  return E('div',{className:'page'},
+    E('div',{className:'card'},
+      E('div',{className:'card-title'},'📜 История рассылок'),
+      history.length===0?E('p',{style:{color:'var(--muted)',fontSize:12}},'Нет рассылок')
+      :E('table',null,
+        E('thead',null,E('tr',null,E('th',null,'Сообщение'),E('th',null,'Отпр.'),E('th',null,'Ошиб.'),E('th',null,'Всего'),E('th',null,'Дата'))),
+        E('tbody',null,history.map(h=>E('tr',{key:h.id},
+          E('td',{style:{maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},h.message),
+          E('td',null,E('span',{className:'badge badge-green'},h.sent)),
+          E('td',null,E('span',{className:'badge '+(h.failed>0?'badge-red':'badge-green')},h.failed)),
+          E('td',null,h.total),
+          E('td',{style:{color:'var(--muted)',fontSize:11}},h.started_at?.slice(0,16).replace('T',' '))))))));
+}
+function App(){
+  const[user,setUser]=useState(null);
+  const[tab,setTab]=useState('chats');
+  const[selected,setSelected]=useState([]);
+  const[checking,setChecking]=useState(false);
+  const[showSettings,setShowSettings]=useState(!sessionStorage.getItem('api_base'));
+  const tryLogin=useCallback(()=>{
+    setChecking(true);
+    fetch(API_BASE+'/api/me').then(r=>r.ok?r.json():null).then(me=>{if(me?.name)setUser(me);}).catch(()=>{}).finally(()=>setChecking(false));
+  },[]);
+  useEffect(()=>{if(!showSettings)tryLogin();},[showSettings]);
+  const doLogout=async()=>{await api.post('/api/logout',{}).catch(()=>{});setUser(null);setSelected([]);};
+  if(showSettings)return E(SettingsScreen,{onSave:()=>{setShowSettings(false);tryLogin();}});
+  if(checking)return E('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',gap:12}},E('span',{className:'spinner'}),E('span',{style:{color:'var(--muted)'}},'Подключение...'));
+  if(!user)return E(LoginPage,{onAuth:setUser});
+  return E(React.Fragment,null,
+    E('div',{className:'header'},
+      E('div',{className:'header-logo'},
+        E('div',{style:{width:32,height:32,background:'var(--accent)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}},'📡'),
+        E('div',null,E('div',{className:'logo-text'},'TG Broadcast'),E('div',{className:'logo-sub'},'Telethon'))),
+      E('div',{className:'header-user'},
+        E('div',{className:'status-dot'}),
+        E('span',null,user.name||user.username),
+        E('button',{className:'btn btn-secondary btn-sm',onClick:()=>setShowSettings(true),style:{marginLeft:8}},'⚙️'),
+        E('button',{className:'btn btn-secondary btn-sm',onClick:doLogout},'Выйти'))),
+    E('div',{className:'nav'},[['chats','📂 Чаты'],['broadcast','🚀 Рассылка'+(selected.length?' ('+selected.length+')':'')],['history','📜 История']].map(([k,l])=>E('button',{key:k,className:'nav-btn'+(tab===k?' active':''),onClick:()=>setTab(k)},l))),
+    E('div',{style:{flex:1,overflow:'auto'}},
+      tab==='chats'&&E(ChatsPage,{selected,setSelected}),
+      tab==='broadcast'&&E(BroadcastPage,{selected}),
+      tab==='history'&&E(HistoryPage,null)));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(E(App,null));
+</script></body></html>
