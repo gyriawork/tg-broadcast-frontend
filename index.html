@@ -1196,6 +1196,9 @@ function ChatsPage({ selected, setSelected, appUser }) {
     setFilterOwner(prev => prev === o ? '' : o);
   };
 
+  const CHATS_PER_PAGE = 100;
+  const [visibleCount, setVisibleCount] = useState(CHATS_PER_PAGE);
+
   const filtered = chats.filter(c => {
     const meta = getChatMeta(c.id);
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -1203,6 +1206,12 @@ function ChatsPage({ selected, setSelected, appUser }) {
     if (filterTags.length > 0 && !filterTags.every(tId => meta.tags.some(t => t.id === tId))) return false;
     return true;
   });
+
+  // Reset pagination when filter changes
+  useEffect(() => { setVisibleCount(CHATS_PER_PAGE); }, [search, filterOwner, filterTags.length]);
+
+  const visibleChats = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > visibleCount;
 
   const selectAll = () => setSelected(filtered.map(c=>c.id));
   const clearAll = () => setSelected([]);
@@ -1310,7 +1319,7 @@ function ChatsPage({ selected, setSelected, appUser }) {
             </div>
 
             <div className="chat-list">
-              {filtered.map(c => {
+              {visibleChats.map(c => {
                 const meta = getChatMeta(c.id);
                 return (
                   <div key={c.id} className={`chat-item ${selected.includes(c.id)?'selected':''}`}
@@ -1351,6 +1360,14 @@ function ChatsPage({ selected, setSelected, appUser }) {
               {filtered.length === 0 && (
                 <div style={{textAlign:'center',padding:'24px 0',color:'var(--muted)',fontSize:12}}>
                   No chats match filters
+                </div>
+              )}
+              {hasMore && (
+                <div style={{textAlign:'center',padding:'12px 0'}}>
+                  <button className="btn-secondary" onClick={() => setVisibleCount(v => v + CHATS_PER_PAGE)}
+                    style={{fontSize:12,padding:'6px 20px'}}>
+                    Show more ({filtered.length - visibleCount} remaining)
+                  </button>
                 </div>
               )}
             </div>
@@ -1461,6 +1478,7 @@ function BroadcastPage({ selected }) {
   const [tplName, setTplName] = useState('');
   const [tplMsg, setTplMsg] = useState('');
   const [tplTab, setTplTab] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const logRef = useRef(null);
   const pollRef = useRef(null);
   const attachRef = useRef(null);
@@ -1500,6 +1518,7 @@ function BroadcastPage({ selected }) {
       max_per_minute: maxPerMin,
       ...(file_id !== null && { file_id }),
     });
+    setConfirmOpen(false);
     startPoll();
   };
 
@@ -1642,7 +1661,7 @@ function BroadcastPage({ selected }) {
       </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
-            onClick={doStart}
+            onClick={() => setConfirmOpen(true)}
             disabled={polling || !canStart}>
             {polling
               ? <><span className="spinner"/> Broadcasting...</>
@@ -1652,6 +1671,34 @@ function BroadcastPage({ selected }) {
           {polling && (
             <button className="btn btn-danger" onClick={doStop}>Stop</button>
           )}
+        </div>
+
+        {/* ── Confirm modal ── */}
+        {confirmOpen && (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+            <div className="card" style={{width:420,maxWidth:'92vw',padding:24}}>
+              <div className="card-title" style={{marginBottom:16}}>⚠️ Confirm Broadcast</div>
+              <div style={{fontSize:13,color:'var(--muted)',marginBottom:12}}>You are about to send to <strong style={{color:'var(--text)'}}>{selected.length} chats</strong>:</div>
+              <div style={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,fontSize:13,maxHeight:120,overflowY:'auto',whiteSpace:'pre-wrap',wordBreak:'break-word',color:'var(--text)',marginBottom:12}}>
+                {message || <span style={{color:'var(--muted)',fontStyle:'italic'}}>(no text)</span>}
+              </div>
+              {attachment && (
+                <div style={{fontSize:12,color:'var(--accent)',marginBottom:12}}>📎 {attachment.name}</div>
+              )}
+              <div style={{fontSize:12,color:'var(--muted)',marginBottom:20}}>
+                Delay: {delay}s{randomDelay ? ` + random 0–10s` : ''} · Max {maxPerMin}/min
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}} onClick={doStart}>
+                  ✅ Send it
+                </button>
+                <button className="btn btn-secondary" style={{flex:1,justifyContent:'center'}} onClick={() => setConfirmOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
 
         {status && (
@@ -1685,6 +1732,7 @@ function BroadcastPage({ selected }) {
 
 function HistoryPage({ appUser }) {
   const [history, setHistory] = useState([]);
+  const [selected, setSelected] = useState(null);
   useEffect(() => { api.get('/api/history').then(r => setHistory(r.history || [])); }, []);
   const isAdmin = appUser?.role === 'admin';
 
@@ -1709,7 +1757,10 @@ function HistoryPage({ appUser }) {
               </thead>
               <tbody>
                 {history.map(h => (
-                  <tr key={h.id}>
+                  <tr key={h.id} onClick={() => setSelected(h)}
+                    style={{cursor:'pointer'}}
+                    onMouseEnter={e => e.currentTarget.style.background='var(--card-hover, rgba(255,255,255,0.04))'}
+                    onMouseLeave={e => e.currentTarget.style.background=''}>
                     {isAdmin && (
                       <td>
                         <span style={{
@@ -1720,7 +1771,7 @@ function HistoryPage({ appUser }) {
                         }}>{h.started_by || '—'}</span>
                       </td>
                     )}
-                    <td style={{maxWidth:200,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.message}</td>
+                    <td style={{maxWidth:200,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.message || <span style={{color:'var(--muted)',fontStyle:'italic'}}>file only</span>}</td>
                     <td><span className="badge badge-green">{h.sent}</span></td>
                     <td><span className={`badge ${h.failed>0?'badge-red':'badge-green'}`}>{h.failed}</span></td>
                     <td>{h.total}</td>
@@ -1732,6 +1783,39 @@ function HistoryPage({ appUser }) {
           </div>
         )}
       </div>
+
+      {/* ── Detail modal ── */}
+      {selected && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}
+          onClick={() => setSelected(null)}>
+          <div className="card" style={{width:480,maxWidth:'94vw',padding:24,maxHeight:'80vh',overflowY:'auto'}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div className="card-title" style={{margin:0}}>Broadcast Details</div>
+              <button className="btn btn-secondary" style={{padding:'4px 12px',fontSize:12}} onClick={() => setSelected(null)}>✕ Close</button>
+            </div>
+            {isAdmin && selected.started_by && (
+              <div style={{marginBottom:10,fontSize:12,color:'var(--muted)'}}>
+                Started by: <strong style={{color:'var(--accent)'}}>{selected.started_by}</strong>
+              </div>
+            )}
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:6}}>Message:</div>
+            <div style={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,
+              fontSize:13,whiteSpace:'pre-wrap',wordBreak:'break-word',color:'var(--text)',marginBottom:16,minHeight:40}}>
+              {selected.message || <span style={{fontStyle:'italic',color:'var(--muted)'}}>no text (file only)</span>}
+            </div>
+            <div className="stats-row" style={{marginBottom:16}}>
+              <div className="stat"><div className="stat-val val-blue">{selected.total}</div><div className="stat-key">Total</div></div>
+              <div className="stat"><div className="stat-val val-green">{selected.sent}</div><div className="stat-key">Sent</div></div>
+              <div className="stat"><div className="stat-val val-red">{selected.failed}</div><div className="stat-key">Failed</div></div>
+            </div>
+            <div style={{display:'flex',gap:16,fontSize:11,color:'var(--muted)'}}>
+              <span>Started: {selected.started_at?.slice(0,16).replace('T',' ')}</span>
+              {selected.finished_at && <span>Finished: {selected.finished_at?.slice(0,16).replace('T',' ')}</span>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
