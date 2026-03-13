@@ -279,7 +279,11 @@ function getAppUser() {
 function setAppUserData(u) { sessionStorage.setItem('app_user', JSON.stringify(u)); }
 function clearAppUserData() { sessionStorage.removeItem('app_user'); }
 
-function getSessionToken() { return sessionStorage.getItem('session_token') || ''; }
+function getSessionToken() { return localStorage.getItem('tgb_session_token') || sessionStorage.getItem('session_token') || ''; }
+function setSessionToken(t) { localStorage.setItem('tgb_session_token', t); sessionStorage.setItem('session_token', t); }
+function clearSessionToken() { localStorage.removeItem('tgb_session_token'); localStorage.removeItem('tgb_tg_creds'); sessionStorage.removeItem('session_token'); }
+function getTgCreds() { try { return JSON.parse(localStorage.getItem('tgb_tg_creds') || 'null'); } catch { return null; } }
+function setTgCreds(apiId, apiHash) { localStorage.setItem('tgb_tg_creds', JSON.stringify({ apiId, apiHash })); }
 function sqt() { const t = getSessionToken(); return t ? '?session_token=' + encodeURIComponent(t) : '?'; }
 function allHeaders(extra = {}) {
   const h = { ...extra };
@@ -563,9 +567,10 @@ function AdminPanel({ appUser, onClose }) {
   );
 }
 function LoginPage({ onAuth, appUser, onAppLogout }) {
+  const savedCreds = getTgCreds();
   const [step, setStep] = useState('config');
-  const [apiId, setApiId] = useState('');
-  const [apiHash, setApiHash] = useState('');
+  const [apiId, setApiId] = useState(savedCreds?.apiId || '');
+  const [apiHash, setApiHash] = useState(savedCreds?.apiHash || '');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -579,7 +584,8 @@ function LoginPage({ onAuth, appUser, onAppLogout }) {
     setLoading(true); setErr('');
     try {
       const r = await api.post('/api/connect', { api_id: parseInt(apiId), api_hash: apiHash });
-      if (r.session_token) sessionStorage.setItem('session_token', r.session_token);
+      if (r.session_token) setSessionToken(r.session_token);
+      setTgCreds(String(apiId), apiHash);
       if (r.authorized) { const me = await api.get('/api/me' + qs()); onAuth(me); }
       else setStep('phone');
     } catch(e) { setErr('Connection failed: ' + e.message); }
@@ -1657,16 +1663,33 @@ function App() {
   const [showSettings, setShowSettings] = useState(!sessionStorage.getItem('api_base'));
   const [showAdmin, setShowAdmin] = useState(false);
 
-  const tryAutoTgLogin = useCallback(() => {
+  const tryAutoTgLogin = useCallback(async () => {
     const tok = getSessionToken();
-    if (!tok) return;
+    const creds = getTgCreds();
+    if (!tok && !creds) return;
     setCheckingTg(true);
-    const url = API_BASE + '/api/me?session_token=' + encodeURIComponent(tok);
-    fetch(url, { headers: { 'Authorization': 'Bearer ' + getAppToken() } })
-      .then(r => r.ok ? r.json() : null)
-      .then(me => { if (me && me.name) setTgUser(me); })
-      .catch(() => {})
-      .finally(() => setCheckingTg(false));
+    try {
+      // Try existing session first
+      if (tok) {
+        const url = API_BASE + '/api/me?session_token=' + encodeURIComponent(tok);
+        const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getAppToken() } });
+        if (r.ok) {
+          const me = await r.json();
+          if (me && me.name) { setTgUser(me); setCheckingTg(false); return; }
+        }
+      }
+      // Session dead but we have creds — reconnect silently
+      if (creds) {
+        const r2 = await api.post('/api/connect', { api_id: parseInt(creds.apiId), api_hash: creds.apiHash });
+        if (r2.session_token) setSessionToken(r2.session_token);
+        if (r2.authorized) {
+          const qs2 = r2.session_token ? '?session_token=' + encodeURIComponent(r2.session_token) : '';
+          const me2 = await api.get('/api/me' + qs2);
+          if (me2 && me2.name) setTgUser(me2);
+        }
+      }
+    } catch {}
+    setCheckingTg(false);
   }, []);
 
   const handleSettingsSave = () => { setShowSettings(false); tryAutoTgLogin(); };
@@ -1686,7 +1709,7 @@ function App() {
         method: 'POST', headers: allHeaders({'Content-Type':'application/json'}), body: '{}'
       }); } catch {}
     }
-    sessionStorage.removeItem('session_token');
+    clearSessionToken();
     clearAppToken(); clearAppUserData();
     setTgUser(null); setAppUser(null); setSelected([]);
   };
