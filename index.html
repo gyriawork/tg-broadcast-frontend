@@ -1492,13 +1492,70 @@ function BroadcastPage({ selected }) {
     const r = await api.get('/api/templates' + sqt()); setTemplates(r.templates || []);
   };
 
+  // Request notification permission once
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const notifyDone = (sent, failed) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Broadcast complete ✅', {
+        body: `Sent: ${sent}  •  Failed: ${failed}`,
+        icon: 'https://classy-boba-c11fe4.netlify.app/favicon.ico',
+      });
+    }
+  };
+
   const startPoll = () => {
     setPolling(true);
+    // Close any existing SSE
+    if (pollRef.current) { pollRef.current.close?.(); clearInterval(pollRef.current); }
+
+    const tok = getSessionToken();
+    const jwt = getAppToken();
+    const url = API_BASE + '/api/broadcast/stream?session_token=' + encodeURIComponent(tok);
+
+    // Try SSE first, fall back to polling if not supported or error
+    try {
+      // SSE doesn't support custom headers natively — pass JWT as query param
+      const sseUrl = url + '&jwt=' + encodeURIComponent(jwt);
+      const es = new EventSource(sseUrl);
+      pollRef.current = es;
+      es.onmessage = (e) => {
+        try {
+          const s = JSON.parse(e.data);
+          setStatus(s);
+          if (!s.running && s.finished) {
+            es.close();
+            setPolling(false);
+            notifyDone(s.sent, s.failed);
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        // SSE failed — fall back to polling
+        es.close();
+        fallbackPoll();
+      };
+    } catch {
+      fallbackPoll();
+    }
+  };
+
+  const fallbackPoll = () => {
     pollRef.current = setInterval(async () => {
-      const s = await api.get('/api/broadcast/status' + sqt());
-      setStatus(s);
-      if (!s.running && s.finished) { clearInterval(pollRef.current); setPolling(false); }
-    }, 800);
+      try {
+        const s = await api.get('/api/broadcast/status' + sqt());
+        setStatus(s);
+        if (!s.running && s.finished) {
+          clearInterval(pollRef.current);
+          setPolling(false);
+          notifyDone(s.sent, s.failed);
+        }
+      } catch {}
+    }, 1500);
   };
 
   const doStart = async () => {
@@ -1809,10 +1866,22 @@ function HistoryPage({ appUser }) {
               <div className="stat"><div className="stat-val val-green">{selected.sent}</div><div className="stat-key">Sent</div></div>
               <div className="stat"><div className="stat-val val-red">{selected.failed}</div><div className="stat-key">Failed</div></div>
             </div>
-            <div style={{display:'flex',gap:16,fontSize:11,color:'var(--muted)'}}>
+            <div style={{display:'flex',gap:16,fontSize:11,color:'var(--muted)',marginBottom: selected.log?.length ? 16 : 0}}>
               <span>Started: {selected.started_at?.slice(0,16).replace('T',' ')}</span>
               {selected.finished_at && <span>Finished: {selected.finished_at?.slice(0,16).replace('T',' ')}</span>}
             </div>
+            {selected.log?.length > 0 && (
+              <>
+                <div style={{fontSize:12,color:'var(--muted)',marginBottom:6}}>Delivery log:</div>
+                <div className="log-box" style={{maxHeight:200,fontSize:11}}>
+                  {selected.log.map((l,i) => (
+                    <div key={i} className="log-line" style={{
+                      color: l.startsWith('OK') ? 'var(--green)' : l.startsWith('FAIL') ? 'var(--red,#f66)' : 'var(--muted)'
+                    }}>{l}</div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
