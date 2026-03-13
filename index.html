@@ -100,25 +100,50 @@
   input:checked + .toggle-slider { background: var(--accent2); }
   input:checked + .toggle-slider:before { transform: translateX(18px); background: var(--accent); }
 
-  .chat-list { max-height: 420px; overflow-y: auto; }
+  .chat-list { max-height: 460px; overflow-y: auto; }
   .chat-item {
-    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px;
     border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px;
-    cursor: pointer; transition: all .15s;
+    cursor: pointer; transition: all .15s; position: relative;
   }
   .chat-item:hover { border-color: var(--accent2); background: var(--surface2); }
   .chat-item.selected { border-color: var(--accent); background: rgba(0,212,255,0.06); }
   .chat-avatar {
     width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: bold; flex-shrink: 0;
+    font-size: 14px; font-weight: bold; flex-shrink: 0; margin-top: 2px;
   }
   .chat-avatar.group { background: rgba(0,212,255,0.15); color: var(--accent); }
   .chat-avatar.channel { background: rgba(0,144,204,0.15); color: var(--accent2); }
   .chat-info { flex: 1; min-width: 0; }
   .chat-name { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .chat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .chat-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .chat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .chat-tags-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .chat-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
   .chat-item.selected .chat-check { background: var(--accent); border-color: var(--accent); }
+  .chat-edit-btn { opacity: 0; transition: opacity .15s; position: absolute; right: 36px; top: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 2px 7px; font-size: 10px; cursor: pointer; }
+  .chat-item:hover .chat-edit-btn { opacity: 1; }
+
+  .tag-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; cursor: default; }
+  .tag-chip.removable { cursor: pointer; }
+  .tag-chip.removable:hover { opacity: 0.7; }
+  .owner-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1px 7px; }
+  .owner-chip svg { width: 9px; height: 9px; }
+
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 10px; font-size: 11px; border: 1px solid transparent; cursor: pointer; transition: all .15s; }
+  .filter-chip:hover { opacity: 0.8; }
+  .filter-chip.active { box-shadow: 0 0 0 1px var(--accent); }
+  .filter-chip-owner { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .filter-chip-owner.active { border-color: var(--accent); color: var(--accent); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; width: 360px; max-height: 80vh; overflow-y: auto; }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+  .modal-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .tag-palette { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .tag-dot.active { border-color: var(--text); }
 
   .progress-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 12px 0; }
   .progress-fill { height: 100%; background: var(--accent); transition: width .3s; }
@@ -417,6 +442,122 @@ function LoginPage({ onAuth }) {
   );
 }
 
+// ─── Tag colors palette ────────────────────────────────────────────────────
+const TAG_COLORS = [
+  '#00d4ff','#00ff88','#ff4466','#ffcc00','#a78bfa','#fb923c',
+  '#34d399','#f472b6','#60a5fa','#e879f9',
+];
+
+// ─── Chat meta storage (in-memory, session-scoped) ─────────────────────────
+const chatMeta = {}; // { [chatId]: { tags: [{id,name,color}], owner: string } }
+const globalTags = {}; // { [tagId]: {id,name,color} }
+let _tagSeq = 1;
+function mkTagId() { return 'tag_' + (_tagSeq++); }
+function getChatMeta(id) {
+  if (!chatMeta[id]) chatMeta[id] = { tags: [], owner: '' };
+  return chatMeta[id];
+}
+function saveChatMeta(id, data) { chatMeta[id] = data; }
+
+// ─── EditChatModal ─────────────────────────────────────────────────────────
+function EditChatModal({ chat, onClose, onSave }) {
+  const meta = getChatMeta(chat.id);
+  const [tags, setTags] = useState([...meta.tags]);
+  const [owner, setOwner] = useState(meta.owner || '');
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+
+  const allGlobalTags = Object.values(globalTags);
+  const hasTag = (tId) => tags.some(t => t.id === tId);
+
+  const addExistingTag = (t) => {
+    if (!hasTag(t.id)) setTags(prev => [...prev, t]);
+  };
+  const removeTag = (tId) => setTags(prev => prev.filter(t => t.id !== tId));
+
+  const createTag = () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    const id = mkTagId();
+    const t = { id, name, color: newTagColor };
+    globalTags[id] = t;
+    setTags(prev => [...prev, t]);
+    setNewTagName('');
+    setNewTagColor(TAG_COLORS[_tagSeq % TAG_COLORS.length]);
+  };
+
+  const handleSave = () => {
+    saveChatMeta(chat.id, { tags, owner });
+    onSave();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-title">Edit Chat</div>
+        <div style={{fontSize:13,color:'var(--text)',marginBottom:16,fontWeight:500}}>{chat.name}</div>
+
+        <span className="modal-label">Owner</span>
+        <input
+          type="text" placeholder="e.g. Anton" value={owner}
+          onChange={e=>setOwner(e.target.value)}
+          style={{marginBottom:16}}
+        />
+
+        <span className="modal-label">Tags on this chat</span>
+        <div className="tag-palette" style={{marginBottom:8}}>
+          {tags.length === 0 && <span style={{fontSize:11,color:'var(--muted)'}}>No tags yet</span>}
+          {tags.map(t => (
+            <span key={t.id} className="tag-chip removable"
+              style={{background: t.color+'22', color: t.color, border:`1px solid ${t.color}55`}}
+              onClick={() => removeTag(t.id)}
+              title="Click to remove">
+              {t.name} &times;
+            </span>
+          ))}
+        </div>
+
+        {allGlobalTags.filter(t => !hasTag(t.id)).length > 0 && (
+          <>
+            <span className="modal-label">Add existing tag</span>
+            <div className="tag-palette" style={{marginBottom:12}}>
+              {allGlobalTags.filter(t => !hasTag(t.id)).map(t => (
+                <span key={t.id} className="tag-chip removable"
+                  style={{background: t.color+'22', color: t.color, border:`1px solid ${t.color}55`}}
+                  onClick={() => addExistingTag(t)}>
+                  + {t.name}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
+        <span className="modal-label">Create new tag</span>
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+          <input type="text" placeholder="Tag name" value={newTagName}
+            onChange={e=>setNewTagName(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&createTag()}
+            style={{flex:1}} />
+          <button className="btn btn-secondary btn-sm" onClick={createTag} disabled={!newTagName.trim()}>+ Add</button>
+        </div>
+        <div style={{display:'flex',gap:6,marginBottom:4}}>
+          {TAG_COLORS.map(c => (
+            <div key={c} className={`tag-dot ${newTagColor===c?'active':''}`}
+              style={{background:c}} onClick={()=>setNewTagColor(c)}/>
+          ))}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ChatsPage ─────────────────────────────────────────────────────────────
 function ChatsPage({ selected, setSelected }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -425,6 +566,12 @@ function ChatsPage({ selected, setSelected }) {
   const [saveListName, setSaveListName] = useState('');
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
+  const [editChat, setEditChat] = useState(null);
+  const [, forceUpdate] = useState(0);
+
+  // filter state
+  const [filterTags, setFilterTags] = useState([]); // tag ids
+  const [filterOwner, setFilterOwner] = useState(''); // owner string
 
   useEffect(() => { loadLists(); }, []);
 
@@ -444,7 +591,25 @@ function ChatsPage({ selected, setSelected }) {
     setSelected(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
   };
 
-  const filtered = chats.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  // Build list of all owners used so far
+  const allOwners = [...new Set(chats.map(c => getChatMeta(c.id).owner).filter(Boolean))];
+  const allTagsInUse = Object.values(globalTags);
+
+  const toggleFilterTag = (tId) => {
+    setFilterTags(prev => prev.includes(tId) ? prev.filter(x=>x!==tId) : [...prev, tId]);
+  };
+  const toggleFilterOwner = (o) => {
+    setFilterOwner(prev => prev === o ? '' : o);
+  };
+
+  const filtered = chats.filter(c => {
+    const meta = getChatMeta(c.id);
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterOwner && meta.owner !== filterOwner) return false;
+    if (filterTags.length > 0 && !filterTags.every(tId => meta.tags.some(t => t.id === tId))) return false;
+    return true;
+  });
+
   const selectAll = () => setSelected(filtered.map(c=>c.id));
   const clearAll = () => setSelected([]);
 
@@ -458,6 +623,8 @@ function ChatsPage({ selected, setSelected }) {
   const deleteList = async (id) => {
     await api.del('/api/lists/' + id); loadLists();
   };
+
+  const hasFilters = filterTags.length > 0 || filterOwner;
 
   return (
     <div className="main">
@@ -484,25 +651,97 @@ function ChatsPage({ selected, setSelected }) {
                 <button className="btn btn-secondary btn-sm" onClick={clearAll}>Clear</button>
               </div>
             </div>
+
+            {/* Filter bar */}
+            {(allTagsInUse.length > 0 || allOwners.length > 0) && (
+              <div style={{marginBottom:10}}>
+                {allTagsInUse.length > 0 && (
+                  <div className="filter-bar" style={{marginBottom:6}}>
+                    <span style={{fontSize:10,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase'}}>Tags:</span>
+                    {allTagsInUse.map(t => (
+                      <span key={t.id}
+                        className={`filter-chip ${filterTags.includes(t.id)?'active':''}`}
+                        style={{background:t.color+'22',color:t.color,border:`1px solid ${filterTags.includes(t.id)?t.color:t.color+'44'}`}}
+                        onClick={()=>toggleFilterTag(t.id)}>
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {allOwners.length > 0 && (
+                  <div className="filter-bar">
+                    <span style={{fontSize:10,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase'}}>Owner:</span>
+                    {allOwners.map(o => (
+                      <span key={o}
+                        className={`filter-chip filter-chip-owner ${filterOwner===o?'active':''}`}
+                        onClick={()=>toggleFilterOwner(o)}>
+                        {o}
+                      </span>
+                    ))}
+                    {hasFilters && (
+                      <span className="filter-chip" style={{color:'var(--muted)',border:'1px solid var(--border)'}}
+                        onClick={()=>{setFilterTags([]);setFilterOwner('');}}>
+                        x Clear
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="search-row">
               <input type="text" placeholder="Search chats..." value={search} onChange={e=>setSearch(e.target.value)} />
             </div>
+
+            <div style={{fontSize:11,color:'var(--muted)',marginBottom:6}}>
+              {filtered.length} of {chats.length} chats
+              {hasFilters && <span style={{color:'var(--accent)',marginLeft:6}}>(filtered)</span>}
+            </div>
+
             <div className="chat-list">
-              {filtered.map(c => (
-                <div key={c.id} className={`chat-item ${selected.includes(c.id)?'selected':''}`} onClick={()=>toggle(c.id)}>
-                  <div className={`chat-avatar ${c.type}`}>{c.name.charAt(0).toUpperCase()}</div>
-                  <div className="chat-info">
-                    <div className="chat-name">{c.name}</div>
-                    <div className="chat-meta">
-                      <span className={`badge badge-${c.type==='channel'?'blue':'green'}`}>{c.type}</span>
-                      {c.members && <span style={{marginLeft:6}}>{c.members.toLocaleString()} members</span>}
+              {filtered.map(c => {
+                const meta = getChatMeta(c.id);
+                return (
+                  <div key={c.id} className={`chat-item ${selected.includes(c.id)?'selected':''}`}
+                    onClick={()=>toggle(c.id)}>
+                    <div className={`chat-avatar ${c.type}`}>{c.name.charAt(0).toUpperCase()}</div>
+                    <div className="chat-info">
+                      <div className="chat-name">{c.name}</div>
+                      <div className="chat-meta">
+                        <span className={`badge badge-${c.type==='channel'?'blue':'green'}`}>{c.type}</span>
+                        {c.members && <span>{c.members.toLocaleString()} members</span>}
+                        {meta.owner && (
+                          <span className="owner-chip">
+                            <svg viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="4" r="2.5"/><path d="M1 10c0-2.2 2.2-4 5-4s5 1.8 5 4"/></svg>
+                            {meta.owner}
+                          </span>
+                        )}
+                      </div>
+                      {meta.tags.length > 0 && (
+                        <div className="chat-tags-row">
+                          {meta.tags.map(t => (
+                            <span key={t.id} className="tag-chip"
+                              style={{background:t.color+'22',color:t.color,border:`1px solid ${t.color}44`}}>
+                              {t.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button className="chat-edit-btn" onClick={e=>{e.stopPropagation();setEditChat(c);}}>
+                      Edit
+                    </button>
+                    <div className="chat-check">
+                      {selected.includes(c.id) && <span style={{color:'var(--bg)',fontSize:12}}>v</span>}
                     </div>
                   </div>
-                  <div className="chat-check">
-                    {selected.includes(c.id) && <span style={{color:'var(--bg)',fontSize:12}}>v</span>}
-                  </div>
+                );
+              })}
+              {filtered.length === 0 && (
+                <div style={{textAlign:'center',padding:'24px 0',color:'var(--muted)',fontSize:12}}>
+                  No chats match filters
                 </div>
-              ))}
+              )}
             </div>
 
             {selected.length > 0 && (
@@ -534,6 +773,14 @@ function ChatsPage({ selected, setSelected }) {
           </div>
         ))}
       </div>
+
+      {editChat && (
+        <EditChatModal
+          chat={editChat}
+          onClose={() => setEditChat(null)}
+          onSave={() => forceUpdate(n => n+1)}
+        />
+      )}
     </div>
   );
 }
