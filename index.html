@@ -262,8 +262,9 @@ body::before {
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
+const DEFAULT_API_BASE = 'https://web-production-b8b8b.up.railway.app';
 function getApiBase() {
-  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || '';
+  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || DEFAULT_API_BASE;
 }
 let API_BASE = getApiBase();
 
@@ -1743,7 +1744,7 @@ function App() {
   const [tab, setTab] = useState('chats');
   const [selected, setSelected] = useState([]);
   const [checkingTg, setCheckingTg] = useState(false);
-  const [showSettings, setShowSettings] = useState(!(localStorage.getItem('api_base') || sessionStorage.getItem('api_base')));
+  const [showSettings, setShowSettings] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
 
