@@ -207,15 +207,16 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
-// ── API URL — берём из sessionStorage или prompt при первом запуске ───────────
+// ââ API URL â Ð±ÐµÑÑÐ¼ Ð¸Ð· sessionStorage Ð¸Ð»Ð¸ prompt Ð¿ÑÐ¸ Ð¿ÐµÑÐ²Ð¾Ð¼ Ð·Ð°Ð¿ÑÑÐºÐµ âââââââââââ
 function getApiBase() {
-  // Сначала смотрим sessionStorage (не localStorage — намеренно, для безопасности)
+  // Ð¡Ð½Ð°ÑÐ°Ð»Ð° ÑÐ¼Ð¾ÑÑÐ¸Ð¼ sessionStorage (Ð½Ðµ localStorage â Ð½Ð°Ð¼ÐµÑÐµÐ½Ð½Ð¾, Ð´Ð»Ñ Ð±ÐµÐ·Ð¾Ð¿Ð°ÑÐ½Ð¾ÑÑÐ¸)
   let base = sessionStorage.getItem('api_base');
   if (base) return base;
-  // Иначе — дефолт для локального запуска
+  // ÐÐ½Ð°ÑÐµ â Ð´ÐµÑÐ¾Ð»Ñ Ð´Ð»Ñ Ð»Ð¾ÐºÐ°Ð»ÑÐ½Ð¾Ð³Ð¾ Ð·Ð°Ð¿ÑÑÐºÐ°
   return 'http://localhost:8000';
 }
 let API_BASE = getApiBase();
@@ -226,7 +227,7 @@ const api = {
   del: (path) => fetch(API_BASE + path, { method:'DELETE' }).then(r => r.json()),
 };
 
-// ── Settings Screen — ввод URL бэкенда ──────────────────────────────────────
+// ââ Settings Screen â Ð²Ð²Ð¾Ð´ URL Ð±ÑÐºÐµÐ½Ð´Ð° ââââââââââââââââââââââââââââââââââââââ
 function SettingsScreen({ onSave }) {
   const [url, setUrl] = useState(API_BASE);
   const [testing, setTesting] = useState(false);
@@ -238,8 +239,8 @@ function SettingsScreen({ onSave }) {
     try {
       const r = await fetch(url.replace(/\/$/, '') + '/health');
       if (r.ok) { setOk(true); }
-      else setErr('Сервер ответил с ошибкой: ' + r.status);
-    } catch(e) { setErr('Не удалось подключиться. Проверь URL.'); }
+      else setErr('Ð¡ÐµÑÐ²ÐµÑ Ð¾ÑÐ²ÐµÑÐ¸Ð» Ñ Ð¾ÑÐ¸Ð±ÐºÐ¾Ð¹: ' + r.status);
+    } catch(e) { setErr('ÐÐµ ÑÐ´Ð°Ð»Ð¾ÑÑ Ð¿Ð¾Ð´ÐºÐ»ÑÑÐ¸ÑÑÑÑ. ÐÑÐ¾Ð²ÐµÑÑ URL.'); }
     setTesting(false);
   };
 
@@ -253,38 +254,38 @@ function SettingsScreen({ onSave }) {
   return (
     <div className="login-wrap">
       <div className="login-hero">
-        <h1>📡 TG Broadcast</h1>
-        <p>Укажи адрес твоего бэкенда на Railway</p>
+        <h1>ð¡ TG Broadcast</h1>
+        <p>Ð£ÐºÐ°Ð¶Ð¸ Ð°Ð´ÑÐµÑ ÑÐ²Ð¾ÐµÐ³Ð¾ Ð±ÑÐºÐµÐ½Ð´Ð° Ð½Ð° Railway</p>
       </div>
       <div className="card">
-        <div className="card-title">🌐 Адрес бэкенда</div>
+        <div className="card-title">ð ÐÐ´ÑÐµÑ Ð±ÑÐºÐµÐ½Ð´Ð°</div>
         <p style={{fontSize:'12px',color:'var(--muted)',marginBottom:12}}>
-          Скопируй URL из Railway (вкладка Settings → Domains) и вставь сюда.
-          Выглядит примерно так: <span style={{color:'var(--accent)'}}>https://xxx.railway.app</span>
+          Ð¡ÐºÐ¾Ð¿Ð¸ÑÑÐ¹ URL Ð¸Ð· Railway (Ð²ÐºÐ»Ð°Ð´ÐºÐ° Settings â Domains) Ð¸ Ð²ÑÑÐ°Ð²Ñ ÑÑÐ´Ð°.
+          ÐÑÐ³Ð»ÑÐ´Ð¸Ñ Ð¿ÑÐ¸Ð¼ÐµÑÐ½Ð¾ ÑÐ°Ðº: <span style={{color:'var(--accent)'}}>https://xxx.railway.app</span>
         </p>
         <label>Backend URL</label>
         <input type="text" placeholder="https://your-app.railway.app" value={url} onChange={e=>setUrl(e.target.value)} />
         {err && <div className="alert alert-err" style={{marginTop:8}}>{err}</div>}
-        {ok && <div className="alert alert-ok" style={{marginTop:8}}>✅ Сервер доступен!</div>}
+        {ok && <div className="alert alert-ok" style={{marginTop:8}}>â Ð¡ÐµÑÐ²ÐµÑ Ð´Ð¾ÑÑÑÐ¿ÐµÐ½!</div>}
         <div className="row-gap" style={{marginTop:14}}>
           <button className="btn btn-secondary" onClick={test} disabled={testing || !url}>
-            {testing ? <><span className="spinner"/> Проверка…</> : '🔍 Проверить'}
+            {testing ? <><span className="spinner"/> ÐÑÐ¾Ð²ÐµÑÐºÐ°â¦</> : 'ð ÐÑÐ¾Ð²ÐµÑÐ¸ÑÑ'}
           </button>
           <button className="btn btn-primary" onClick={save} disabled={!url}>
-            Сохранить →
+            Ð¡Ð¾ÑÑÐ°Ð½Ð¸ÑÑ â
           </button>
         </div>
       </div>
       <div style={{textAlign:'center',marginTop:12}}>
-        <span style={{fontSize:11,color:'var(--muted)'}}>Для локального запуска оставь </span>
+        <span style={{fontSize:11,color:'var(--muted)'}}>ÐÐ»Ñ Ð»Ð¾ÐºÐ°Ð»ÑÐ½Ð¾Ð³Ð¾ Ð·Ð°Ð¿ÑÑÐºÐ° Ð¾ÑÑÐ°Ð²Ñ </span>
         <span style={{fontSize:11,color:'var(--accent)'}}>http://localhost:8000</span>
-        <span style={{fontSize:11,color:'var(--muted)'}}> и нажми Сохранить</span>
+        <span style={{fontSize:11,color:'var(--muted)'}}> Ð¸ Ð½Ð°Ð¶Ð¼Ð¸ Ð¡Ð¾ÑÑÐ°Ð½Ð¸ÑÑ</span>
       </div>
     </div>
   );
 }
 
-// ── Login Page ───────────────────────────────────────────────────────────────
+// ââ Login Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function LoginPage({ onAuth }) {
   const [step, setStep] = useState('config'); // config | phone | code | 2fa
   const [apiId, setApiId] = useState('');
@@ -330,15 +331,15 @@ function LoginPage({ onAuth }) {
   return (
     <div className="login-wrap">
       <div className="login-hero">
-        <h1>📡 TG Broadcast</h1>
+        <h1>ð¡ TG Broadcast</h1>
         <p>Telegram user-account broadcast tool via Telethon</p>
       </div>
 
       {step === 'config' && (
         <div className="card">
-          <div className="card-title">🔑 API Credentials</div>
+          <div className="card-title">ð API Credentials</div>
           <p style={{fontSize:'12px',color:'var(--muted)',marginBottom:12}}>
-            Get your credentials from <a href="https://my.telegram.org" target="_blank" style={{color:'var(--accent)'}}>my.telegram.org</a> → API development tools
+            Get your credentials from <a href="https://my.telegram.org" target="_blank" style={{color:'var(--accent)'}}>my.telegram.org</a> â API development tools
           </p>
           <label>API ID</label>
           <input type="text" placeholder="12345678" value={apiId} onChange={e=>setApiId(e.target.value)} />
@@ -347,7 +348,7 @@ function LoginPage({ onAuth }) {
           {err && <div className="alert alert-err">{err}</div>}
           <div style={{marginTop:16}}>
             <button className="btn btn-primary" onClick={doConnect} disabled={loading || !apiId || !apiHash}>
-              {loading ? <><span className="spinner"/> Connecting…</> : '→ Connect'}
+              {loading ? <><span className="spinner"/> Connectingâ¦</> : 'â Connect'}
             </button>
           </div>
         </div>
@@ -355,14 +356,14 @@ function LoginPage({ onAuth }) {
 
       {step === 'phone' && (
         <div className="card">
-          <div className="card-title">📱 Phone Number</div>
+          <div className="card-title">ð± Phone Number</div>
           <label>Phone (international format)</label>
           <input type="tel" placeholder="+79001234567" value={phone} onChange={e=>setPhone(e.target.value)} />
           {err && <div className="alert alert-err">{err}</div>}
           <div className="row-gap">
-            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('config')}>← Back</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('config')}>â Back</button>
             <button className="btn btn-primary" onClick={doPhone} disabled={loading || !phone}>
-              {loading ? <><span className="spinner"/> Sending…</> : 'Send Code →'}
+              {loading ? <><span className="spinner"/> Sendingâ¦</> : 'Send Code â'}
             </button>
           </div>
         </div>
@@ -370,7 +371,7 @@ function LoginPage({ onAuth }) {
 
       {(step === 'code' || step === '2fa') && (
         <div className="card">
-          <div className="card-title">{step === '2fa' ? '🔐 2FA Password' : '📨 Verification Code'}</div>
+          <div className="card-title">{step === '2fa' ? 'ð 2FA Password' : 'ð¨ Verification Code'}</div>
           {msg && <div className="alert alert-info" style={{marginBottom:12}}>{msg}</div>}
           {step === 'code' && (
             <>
@@ -379,12 +380,12 @@ function LoginPage({ onAuth }) {
             </>
           )}
           <label>2FA Password {step === 'code' ? '(if enabled)' : '(required)'}</label>
-          <input type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} />
+          <input type="password" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢" value={password} onChange={e=>setPassword(e.target.value)} />
           {err && <div className="alert alert-err">{err}</div>}
           <div className="row-gap">
-            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('phone')}>← Back</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('phone')}>â Back</button>
             <button className="btn btn-primary" onClick={doCode} disabled={loading || !code}>
-              {loading ? <><span className="spinner"/> Verifying…</> : 'Verify →'}
+              {loading ? <><span className="spinner"/> Verifyingâ¦</> : 'Verify â'}
             </button>
           </div>
         </div>
@@ -393,7 +394,7 @@ function LoginPage({ onAuth }) {
   );
 }
 
-// ── Chat Loader Page ─────────────────────────────────────────────────────────
+// ââ Chat Loader Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function ChatsPage({ selected, setSelected }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -444,10 +445,10 @@ function ChatsPage({ selected, setSelected }) {
     <div className="main">
       <div className="page">
         <div className="card">
-          <div className="card-title">📂 Load Chats</div>
+          <div className="card-title">ð Load Chats</div>
           <div style={{display:'flex',gap:10}}>
             <button className="btn btn-primary" onClick={loadChats} disabled={loading}>
-              {loading ? <><span className="spinner"/> Loading…</> : '⟳ Load My Chats'}
+              {loading ? <><span className="spinner"/> Loadingâ¦</> : 'â³ Load My Chats'}
             </button>
             {chats.length > 0 && <span style={{color:'var(--muted)',alignSelf:'center',fontSize:12}}>{chats.length} chats found</span>}
           </div>
@@ -466,7 +467,7 @@ function ChatsPage({ selected, setSelected }) {
               </div>
             </div>
             <div className="search-row">
-              <input type="text" placeholder="🔍  Search chats…" value={search} onChange={e=>setSearch(e.target.value)} />
+              <input type="text" placeholder="ð  Search chatsâ¦" value={search} onChange={e=>setSearch(e.target.value)} />
             </div>
             <div className="chat-list">
               {filtered.map(c => (
@@ -480,7 +481,7 @@ function ChatsPage({ selected, setSelected }) {
                     </div>
                   </div>
                   <div className="chat-check">
-                    {selected.includes(c.id) && <span style={{color:'var(--bg)',fontSize:12}}>✓</span>}
+                    {selected.includes(c.id) && <span style={{color:'var(--bg)',fontSize:12}}>â</span>}
                   </div>
                 </div>
               ))}
@@ -502,16 +503,16 @@ function ChatsPage({ selected, setSelected }) {
       </div>
 
       <div className="sidebar">
-        <div className="sidebar-title">💾 Saved Lists</div>
+        <div className="sidebar-title">ð¾ Saved Lists</div>
         {lists.length === 0 && <p style={{color:'var(--muted)',fontSize:12}}>No saved lists yet</p>}
         {lists.map(lst => (
           <div key={lst.id} style={{marginBottom:10,padding:'10px',background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{fontSize:13}}>{lst.name}</span>
-              <button className="btn btn-secondary btn-sm" style={{padding:'3px 8px',fontSize:10}} onClick={()=>deleteList(lst.id)}>✕</button>
+              <button className="btn btn-secondary btn-sm" style={{padding:'3px 8px',fontSize:10}} onClick={()=>deleteList(lst.id)}>â</button>
             </div>
             <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{lst.chats.length} chats</div>
-            <button className="btn btn-secondary btn-sm" style={{marginTop:8,width:'100%'}} onClick={()=>loadSavedList(lst)}>→ Load</button>
+            <button className="btn btn-secondary btn-sm" style={{marginTop:8,width:'100%'}} onClick={()=>loadSavedList(lst)}>â Load</button>
           </div>
         ))}
       </div>
@@ -519,7 +520,7 @@ function ChatsPage({ selected, setSelected }) {
   );
 }
 
-// ── Broadcast Page ───────────────────────────────────────────────────────────
+// ââ Broadcast Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function BroadcastPage({ selected }) {
   const [message, setMessage] = useState('');
   const [delay, setDelay] = useState(5);
@@ -577,12 +578,12 @@ function BroadcastPage({ selected }) {
       <div className="page">
         {selected.length === 0 && (
           <div className="alert alert-info" style={{marginBottom:16}}>
-            ← Select chats in the Chats tab first
+            â Select chats in the Chats tab first
           </div>
         )}
 
         <div className="card">
-          <div className="card-title">📨 Compose Message</div>
+          <div className="card-title">ð¨ Compose Message</div>
           <div style={{display:'flex',gap:8,marginBottom:10}}>
             <button className="btn btn-secondary btn-sm" onClick={()=>setTplTab(false)} style={!tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}}>Compose</button>
             <button className="btn btn-secondary btn-sm" onClick={()=>setTplTab(true)} style={tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}}>Templates</button>
@@ -590,8 +591,8 @@ function BroadcastPage({ selected }) {
 
           {!tplTab ? (
             <>
-              <textarea placeholder="Type your broadcast message here…" value={message} onChange={e=>setMessage(e.target.value)} style={{minHeight:130}} />
-              <div style={{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}}>{message.length} chars · {selected.length} chats selected</div>
+              <textarea placeholder="Type your broadcast message hereâ¦" value={message} onChange={e=>setMessage(e.target.value)} style={{minHeight:130}} />
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}}>{message.length} chars Â· {selected.length} chats selected</div>
             </>
           ) : (
             <div>
@@ -604,7 +605,7 @@ function BroadcastPage({ selected }) {
                       <div style={{fontSize:11,color:'var(--muted)',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:300}}>{t.text}</div>
                     </div>
                     <button className="btn btn-secondary btn-sm" onClick={()=>{setMessage(t.text);setTplTab(false);}}>Use</button>
-                    <button className="btn btn-sm" style={{background:'transparent',color:'var(--muted)',border:'none',padding:'4px 6px'}} onClick={()=>api.del('/api/templates/'+t.id).then(loadTemplates)}>✕</button>
+                    <button className="btn btn-sm" style={{background:'transparent',color:'var(--muted)',border:'none',padding:'4px 6px'}} onClick={()=>api.del('/api/templates/'+t.id).then(loadTemplates)}>â</button>
                   </div>
                 ))}
               </div>
@@ -612,7 +613,7 @@ function BroadcastPage({ selected }) {
               <label>New Template Name</label>
               <input type="text" placeholder="Template name" value={tplName} onChange={e=>setTplName(e.target.value)} />
               <label>Message Text</label>
-              <textarea placeholder="Template message…" value={tplMsg} onChange={e=>setTplMsg(e.target.value)} style={{minHeight:80}} />
+              <textarea placeholder="Template messageâ¦" value={tplMsg} onChange={e=>setTplMsg(e.target.value)} style={{minHeight:80}} />
               <div style={{marginTop:10}}>
                 <button className="btn btn-secondary btn-sm" onClick={doSaveTpl} disabled={!tplName||!tplMsg}>Save Template</button>
               </div>
@@ -621,7 +622,7 @@ function BroadcastPage({ selected }) {
         </div>
 
         <div className="card">
-          <div className="card-title">⚙️ Broadcast Settings</div>
+          <div className="card-title">âï¸ Broadcast Settings</div>
           <div className="two-col">
             <div>
               <label>Delay (seconds)</label>
@@ -633,29 +634,29 @@ function BroadcastPage({ selected }) {
             </div>
           </div>
           <div className="toggle-row">
-            <span className="toggle-label">Random delay (+0–10s)</span>
+            <span className="toggle-label">Random delay (+0â10s)</span>
             <label className="toggle">
               <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
               <span className="toggle-slider"/>
             </label>
           </div>
-          {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}–{delay+10}s between messages</div>}
+          {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}â{delay+10}s between messages</div>}
         </div>
 
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
             onClick={doStart}
             disabled={polling || !selected.length || !message.trim()}>
-            {polling ? <><span className="spinner"/> Broadcasting…</> : `🚀 Start Broadcast (${selected.length} chats)`}
+            {polling ? <><span className="spinner"/> Broadcastingâ¦</> : `ð Start Broadcast (${selected.length} chats)`}
           </button>
           {polling && (
-            <button className="btn btn-danger" onClick={doStop}>⏹ Stop</button>
+            <button className="btn btn-danger" onClick={doStop}>â¹ Stop</button>
           )}
         </div>
 
         {status && (
           <div className="card" style={{marginTop:16}}>
-            <div className="card-title">📊 Progress</div>
+            <div className="card-title">ð Progress</div>
             {status.current_chat && (
               <div style={{marginBottom:10,display:'flex',alignItems:'center',gap:8}}>
                 <span className="spinner"/>
@@ -673,7 +674,7 @@ function BroadcastPage({ selected }) {
             </div>
             <div className="log-box" ref={logRef}>
               {(status.log || []).map((l,i) => <div key={i} className="log-line">{l}</div>)}
-              {!status.running && status.finished && <div className="log-line" style={{color:'var(--green)',marginTop:8}}>━━ BROADCAST COMPLETE ━━</div>}
+              {!status.running && status.finished && <div className="log-line" style={{color:'var(--green)',marginTop:8}}>ââ BROADCAST COMPLETE ââ</div>}
             </div>
           </div>
         )}
@@ -682,7 +683,7 @@ function BroadcastPage({ selected }) {
   );
 }
 
-// ── History Page ─────────────────────────────────────────────────────────────
+// ââ History Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function HistoryPage() {
   const [history, setHistory] = useState([]);
   useEffect(() => { api.get('/api/history').then(r => setHistory(r.history || [])); }, []);
@@ -690,7 +691,7 @@ function HistoryPage() {
   return (
     <div className="page">
       <div className="card">
-        <div className="card-title">📜 Broadcast History</div>
+        <div className="card-title">ð Broadcast History</div>
         {history.length === 0 ? (
           <p style={{color:'var(--muted)',fontSize:12}}>No broadcasts yet</p>
         ) : (
@@ -724,7 +725,7 @@ function HistoryPage() {
   );
 }
 
-// ── App ──────────────────────────────────────────────────────────────────────
+// ââ App ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function App() {
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('chats');
@@ -759,7 +760,7 @@ function App() {
 
   if (checkingAuth) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',gap:12}}>
-      <span className="spinner"/> <span style={{color:'var(--muted)'}}>Подключение…</span>
+      <span className="spinner"/> <span style={{color:'var(--muted)'}}>ÐÐ¾Ð´ÐºÐ»ÑÑÐµÐ½Ð¸Ðµâ¦</span>
     </div>
   );
 
@@ -769,7 +770,7 @@ function App() {
     <>
       <div className="header">
         <div className="header-logo">
-          <div className="logo-icon">📡</div>
+          <div className="logo-icon">ð¡</div>
           <div>
             <div className="logo-text">TG Broadcast</div>
             <div className="logo-sub">Telethon User Client</div>
@@ -778,13 +779,13 @@ function App() {
         <div className="header-user">
           <div className="status-dot"/>
           <span>{user.name || user.username}</span>
-          <span style={{color:'var(--border)'}}>·</span>
-          <button className="btn btn-secondary btn-sm" onClick={()=>setShowSettings(true)} style={{marginRight:4}}>⚙️</button>
-          <button className="btn btn-secondary btn-sm" onClick={doLogout}>Выйти</button>
+          <span style={{color:'var(--border)'}}>Â·</span>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowSettings(true)} style={{marginRight:4}}>âï¸</button>
+          <button className="btn btn-secondary btn-sm" onClick={doLogout}>ÐÑÐ¹ÑÐ¸</button>
         </div>
       </div>
       <div className="nav">
-        {[['chats','📂 Чаты'], ['broadcast','🚀 Рассылка'+(selected.length?` (${selected.length})`:'')], ['history','📜 История']].map(([k,l]) => (
+        {[['chats','ð Ð§Ð°ÑÑ'], ['broadcast','ð Ð Ð°ÑÑÑÐ»ÐºÐ°'+(selected.length?` (${selected.length})`:'')], ['history','ð ÐÑÑÐ¾ÑÐ¸Ñ']].map(([k,l]) => (
           <button key={k} className={`nav-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
