@@ -269,18 +269,35 @@ function getApiBase() {
 }
 let API_BASE = getApiBase();
 
+// ─── App auth (JWT) ──────────────────────────────────────────────────────────
+function getAppToken() { return sessionStorage.getItem('app_token') || ''; }
+function setAppToken(t) { sessionStorage.setItem('app_token', t); }
+function clearAppToken() { sessionStorage.removeItem('app_token'); }
+function getAppUser() {
+  try { return JSON.parse(sessionStorage.getItem('app_user') || 'null'); } catch { return null; }
+}
+function setAppUserData(u) { sessionStorage.setItem('app_user', JSON.stringify(u)); }
+function clearAppUserData() { sessionStorage.removeItem('app_user'); }
+
 function getSessionToken() { return sessionStorage.getItem('session_token') || ''; }
-function sessionHeaders(extra) {
-  const t = getSessionToken();
-  return t ? { ...extra, 'X-Session-Token': t } : extra;
+function sqt() { const t = getSessionToken(); return t ? '?session_token=' + encodeURIComponent(t) : '?'; }
+function allHeaders(extra = {}) {
+  const h = { ...extra };
+  const tg = getSessionToken();
+  const jwt = getAppToken();
+  if (tg) h['X-Session-Token'] = tg;
+  if (jwt) h['Authorization'] = 'Bearer ' + jwt;
+  return h;
 }
 const api = {
-  get: (path) => fetch(API_BASE + path, { headers: sessionHeaders({}) }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
-  post: (path, body) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
-  upload: (path, formData) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({}), body: formData }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
-  del: (path) => fetch(API_BASE + path, { method:'DELETE', headers: sessionHeaders({}) }).then(r => r.json()),
+  get:    (path) => fetch(API_BASE + path, { headers: allHeaders() }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  post:   (path, body) => fetch(API_BASE + path, { method:'POST', headers: allHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  upload: (path, fd) => fetch(API_BASE + path, { method:'POST', headers: allHeaders(), body: fd }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  del:    (path) => fetch(API_BASE + path, { method:'DELETE', headers: allHeaders() }).then(r => r.json()),
+  put:    (path, body) => fetch(API_BASE + path, { method:'PUT', headers: allHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
 };
 
+// ─── SettingsScreen ──────────────────────────────────────────────────────────
 function SettingsScreen({ onSave }) {
   const [url, setUrl] = useState(API_BASE);
   const [testing, setTesting] = useState(false);
@@ -291,7 +308,7 @@ function SettingsScreen({ onSave }) {
     setTesting(true); setErr(''); setOk(false);
     try {
       const r = await fetch(url.replace(/\/$/, '') + '/health');
-      if (r.ok) { setOk(true); }
+      if (r.ok) setOk(true);
       else setErr('Server error: ' + r.status);
     } catch(e) { setErr('Cannot connect. Check the URL.'); }
     setTesting(false);
@@ -324,8 +341,58 @@ function SettingsScreen({ onSave }) {
           <button className="btn btn-secondary" onClick={test} disabled={testing || !url}>
             {testing ? <><span className="spinner"/> Checking...</> : 'Test'}
           </button>
-          <button className="btn btn-primary" onClick={save} disabled={!url}>
-            Save
+          <button className="btn btn-primary" onClick={save} disabled={!url}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AppLoginScreen ──────────────────────────────────────────────────────────
+function AppLoginScreen({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const doLogin = async () => {
+    setLoading(true); setErr('');
+    try {
+      const r = await fetch(API_BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Login failed'); }
+      const data = await r.json();
+      setAppToken(data.token);
+      setAppUserData({ id: data.id, username: data.username, role: data.role });
+      onLogin({ id: data.id, username: data.username, role: data.role });
+    } catch(e) { setErr(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-hero">
+        <h1>Telegram Broadcast</h1>
+        <p>Evoplay User Client</p>
+      </div>
+      <div className="card">
+        <div className="card-title">Sign In</div>
+        <label>Username</label>
+        <input type="text" placeholder="admin" value={username}
+          onChange={e=>setUsername(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&doLogin()} />
+        <label>Password</label>
+        <input type="password" placeholder="••••••••" value={password}
+          onChange={e=>setPassword(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&doLogin()} />
+        {err && <div className="alert alert-err" style={{marginTop:8}}>{err}</div>}
+        <div style={{marginTop:16}}>
+          <button className="btn btn-primary" style={{width:'100%'}}
+            onClick={doLogin} disabled={loading || !username || !password}>
+            {loading ? <><span className="spinner"/> Signing in...</> : 'Sign In'}
           </button>
         </div>
       </div>
@@ -333,7 +400,169 @@ function SettingsScreen({ onSave }) {
   );
 }
 
-function LoginPage({ onAuth }) {
+// ─── AdminPanel ──────────────────────────────────────────────────────────────
+function AdminPanel({ appUser, onClose }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newUsername, setNewUsername] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [creating, setCreating] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [newCreds, setNewCreds] = useState(null); // {username, password, role}
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try { const r = await api.get('/api/users'); setUsers(r.users); }
+    catch(e) { setErr('Failed to load users'); }
+    setLoading(false);
+  };
+
+  const createUser = async () => {
+    if (!newUsername.trim()) return;
+    setCreating(true); setErr(''); setMsg('');
+    try {
+      const r = await api.post('/api/users', { username: newUsername.trim(), role: newRole });
+      setNewCreds({ username: r.username, password: r.password, role: r.role });
+      setNewUsername(''); setNewRole('user');
+      loadUsers();
+    } catch(e) { setErr(e.message); }
+    setCreating(false);
+  };
+
+  const deleteUser = async (uid, uname) => {
+    if (!window.confirm(`Delete user "${uname}"?`)) return;
+    try { await api.del('/api/users/' + uid); loadUsers(); setMsg('User deleted'); }
+    catch(e) { setErr(e.message); }
+  };
+
+  const resetPassword = async (uid, uname) => {
+    if (!window.confirm(`Reset password for "${uname}"?`)) return;
+    try {
+      const r = await api.post('/api/users/' + uid + '/reset-password', {});
+      setNewCreds({ username: uname, password: r.password, role: '' });
+    } catch(e) { setErr(e.message); }
+  };
+
+  const roleBadge = (role) => (
+    <span style={{
+      display:'inline-block', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700,
+      background: role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+      color: role==='admin' ? 'var(--accent)' : 'var(--muted)',
+      border: `1px solid ${role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+    }}>{role}</span>
+  );
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:520,width:'100%'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div className="modal-title" style={{margin:0}}>User Management</div>
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+        </div>
+
+        {err && <div className="alert alert-err" style={{marginBottom:12}}>{err}</div>}
+        {msg && <div className="alert alert-ok" style={{marginBottom:12}}>{msg}</div>}
+
+        {/* New credentials display */}
+        {newCreds && (
+          <div style={{background:'var(--surface2)',border:'1px solid var(--accent)44',borderRadius:'var(--radius)',padding:14,marginBottom:16}}>
+            <div style={{fontSize:12,color:'var(--accent)',fontWeight:700,marginBottom:8}}>
+              {newCreds.role ? 'User created' : 'Password reset'} — save these credentials!
+            </div>
+            <div style={{fontFamily:'monospace',fontSize:13,marginBottom:4}}>
+              <span style={{color:'var(--muted)'}}>Username: </span>
+              <span style={{color:'var(--text)',fontWeight:700}}>{newCreds.username}</span>
+            </div>
+            <div style={{fontFamily:'monospace',fontSize:13,marginBottom:8}}>
+              <span style={{color:'var(--muted)'}}>Password: </span>
+              <span style={{color:'var(--accent)',fontWeight:700,letterSpacing:'0.05em'}}>{newCreds.password}</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={()=>{
+              navigator.clipboard.writeText(`Username: ${newCreds.username}\nPassword: ${newCreds.password}`);
+              setMsg('Copied!'); setTimeout(()=>setMsg(''),1500);
+            }}>Copy</button>
+            <button className="btn btn-secondary btn-sm" style={{marginLeft:8}} onClick={()=>setNewCreds(null)}>Dismiss</button>
+          </div>
+        )}
+
+        {/* Create user */}
+        <div className="card" style={{marginBottom:16,padding:14}}>
+          <div className="card-title" style={{marginBottom:12}}>Create New User</div>
+          <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+            <div style={{flex:1}}>
+              <label>Username</label>
+              <input type="text" placeholder="username" value={newUsername}
+                onChange={e=>setNewUsername(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&createUser()} />
+            </div>
+            <div>
+              <label>Role</label>
+              <select value={newRole} onChange={e=>setNewRole(e.target.value)}
+                style={{display:'block',background:'var(--surface2)',color:'var(--text)',
+                  border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'8px 12px',
+                  fontSize:13,cursor:'pointer'}}>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={createUser}
+              disabled={creating || !newUsername.trim()}>
+              {creating ? <span className="spinner"/> : '+ Create'}
+            </button>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
+            Password will be auto-generated and shown once.
+          </div>
+        </div>
+
+        {/* Users list */}
+        <div style={{maxHeight:340,overflowY:'auto'}}>
+          {loading ? (
+            <div style={{textAlign:'center',padding:20}}><span className="spinner"/></div>
+          ) : users.map(u => (
+            <div key={u.id} style={{
+              display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+              background:'var(--surface2)',borderRadius:'var(--radius)',
+              border:'1px solid var(--border)',marginBottom:6,
+            }}>
+              <div style={{flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontWeight:600,fontSize:13}}>{u.username}</span>
+                  {roleBadge(u.role)}
+                  {String(u.id) === String(appUser.id) && (
+                    <span style={{fontSize:10,color:'var(--accent)'}}>(you)</span>
+                  )}
+                </div>
+                <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>
+                  Created {u.created_at ? u.created_at.slice(0,10) : '—'}
+                </div>
+              </div>
+              {String(u.id) !== String(appUser.id) && (
+                <div style={{display:'flex',gap:6}}>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>resetPassword(u.id, u.username)}
+                    style={{fontSize:11,padding:'3px 8px'}}>
+                    Reset PW
+                  </button>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>deleteUser(u.id, u.username)}
+                    style={{fontSize:11,padding:'3px 8px',color:'var(--err)'}}>
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+function LoginPage({ onAuth, appUser, onAppLogout }) {
   const [step, setStep] = useState('config');
   const [apiId, setApiId] = useState('');
   const [apiHash, setApiHash] = useState('');
@@ -344,12 +573,14 @@ function LoginPage({ onAuth }) {
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
 
+  const qs = () => { const t = getSessionToken(); return t ? '?session_token=' + encodeURIComponent(t) : ''; };
+
   const doConnect = async () => {
     setLoading(true); setErr('');
     try {
       const r = await api.post('/api/connect', { api_id: parseInt(apiId), api_hash: apiHash });
       if (r.session_token) sessionStorage.setItem('session_token', r.session_token);
-      if (r.authorized) { const me = await api.get('/api/me'); onAuth(me); }
+      if (r.authorized) { const me = await api.get('/api/me' + qs()); onAuth(me); }
       else setStep('phone');
     } catch(e) { setErr('Connection failed: ' + e.message); }
     setLoading(false);
@@ -358,7 +589,7 @@ function LoginPage({ onAuth }) {
   const doPhone = async () => {
     setLoading(true); setErr('');
     try {
-      await api.post('/api/send_code', { phone });
+      await api.post('/api/send_code' + qs(), { phone });
       setStep('code'); setMsg('Code sent to your Telegram!');
     } catch(e) { setErr('Failed to send code'); }
     setLoading(false);
@@ -367,7 +598,7 @@ function LoginPage({ onAuth }) {
   const doCode = async () => {
     setLoading(true); setErr('');
     try {
-      const r = await api.post('/api/verify_code', { code, password: password || null });
+      const r = await api.post('/api/verify_code' + qs(), { code, password: password || null });
       if (r.authorized) onAuth(r);
     } catch(e) {
       if (e.message && e.message.includes('2FA')) setStep('2fa');
@@ -382,6 +613,27 @@ function LoginPage({ onAuth }) {
         <h1>Telegram Broadcast</h1>
         <p>Reach all your groups in one go — powered by your own Telegram account</p>
       </div>
+
+      {appUser && (
+        <div style={{
+          display:'flex',alignItems:'center',justifyContent:'space-between',
+          background:'var(--surface2)',border:'1px solid var(--border)',
+          borderRadius:'var(--radius)',padding:'10px 14px',marginBottom:16,
+        }}>
+          <div style={{fontSize:12,color:'var(--muted)'}}>
+            Signed in as{' '}
+            <span style={{color:'var(--accent)',fontWeight:700}}>{appUser.username}</span>
+            {' '}<span style={{
+              fontSize:10,padding:'1px 6px',borderRadius:8,
+              background: appUser.role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+              color: appUser.role==='admin' ? 'var(--accent)' : 'var(--muted)',
+              border:`1px solid ${appUser.role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+            }}>{appUser.role}</span>
+          </div>
+          <button className="btn btn-secondary btn-sm" style={{fontSize:11,padding:'2px 8px'}}
+            onClick={onAppLogout}>Switch account</button>
+        </div>
+      )}
 
       {step === 'config' && (
         <div className="card">
@@ -842,13 +1094,13 @@ function ChatsPage({ selected, setSelected }) {
 
   const loadChats = async () => {
     setLoading(true); setErr('');
-    try { const r = await api.get('/api/chats'); setChats(r.chats); }
+    try { const r = await api.get('/api/chats' + sqt()); setChats(r.chats); }
     catch(e) { setErr('Failed to load chats'); }
     setLoading(false);
   };
 
   const loadLists = async () => {
-    const r = await api.get('/api/lists');
+    const r = await api.get('/api/lists' + sqt());
     setLists(r.lists || []);
   };
 
@@ -880,13 +1132,13 @@ function ChatsPage({ selected, setSelected }) {
 
   const doSaveList = async () => {
     if (!saveListName || !selected.length) return;
-    await api.post('/api/lists', { name: saveListName, chat_ids: selected });
+    await api.post('/api/lists' + sqt(), { name: saveListName, chat_ids: selected });
     setSaveListName(''); setMsg('List saved!'); loadLists();
     setTimeout(() => setMsg(''), 2500);
   };
 
   const deleteList = async (id) => {
-    await api.del('/api/lists/' + id); loadLists();
+    await api.del('/api/lists/' + id + sqt().replace('?','&')); loadLists();
   };
 
   const hasFilters = filterTags.length > 0 || filterOwner;
@@ -1129,13 +1381,13 @@ function BroadcastPage({ selected }) {
   }, [status?.log]);
 
   const loadTemplates = async () => {
-    const r = await api.get('/api/templates'); setTemplates(r.templates || []);
+    const r = await api.get('/api/templates' + sqt()); setTemplates(r.templates || []);
   };
 
   const startPoll = () => {
     setPolling(true);
     pollRef.current = setInterval(async () => {
-      const s = await api.get('/api/broadcast/status');
+      const s = await api.get('/api/broadcast/status' + sqt());
       setStatus(s);
       if (!s.running && s.finished) { clearInterval(pollRef.current); setPolling(false); }
     }, 800);
@@ -1147,10 +1399,10 @@ function BroadcastPage({ selected }) {
     if (attachment) {
       const fd = new FormData();
       fd.append('file', attachment, attachment.name);
-      const uploaded = await api.upload('/api/upload', fd);
+      const uploaded = await api.upload('/api/upload' + sqt(), fd);
       file_id = uploaded.file_id ?? uploaded.id ?? uploaded.url ?? null;
     }
-    await api.post('/api/broadcast/start', {
+    await api.post('/api/broadcast/start' + sqt(), {
       chat_ids: selected,
       message,
       delay,
@@ -1162,12 +1414,12 @@ function BroadcastPage({ selected }) {
   };
 
   const doStop = async () => {
-    await api.post('/api/broadcast/stop', {});
+    await api.post('/api/broadcast/stop' + sqt(), {});
   };
 
   const doSaveTpl = async () => {
     if (!tplName || !tplMsg) return;
-    await api.post('/api/templates', { name: tplName, text: tplMsg });
+    await api.post('/api/templates' + sqt(), { name: tplName, text: tplMsg });
     setTplName(''); setTplMsg(''); loadTemplates();
   };
 
@@ -1341,9 +1593,10 @@ function BroadcastPage({ selected }) {
   );
 }
 
-function HistoryPage() {
+function HistoryPage({ appUser }) {
   const [history, setHistory] = useState([]);
   useEffect(() => { api.get('/api/history').then(r => setHistory(r.history || [])); }, []);
+  const isAdmin = appUser?.role === 'admin';
 
   return (
     <div className="page">
@@ -1356,6 +1609,7 @@ function HistoryPage() {
             <table>
               <thead>
                 <tr>
+                  {isAdmin && <th>User</th>}
                   <th>Message</th>
                   <th>Sent</th>
                   <th>Failed</th>
@@ -1366,7 +1620,17 @@ function HistoryPage() {
               <tbody>
                 {history.map(h => (
                   <tr key={h.id}>
-                    <td style={{maxWidth:240,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.message}</td>
+                    {isAdmin && (
+                      <td>
+                        <span style={{
+                          display:'inline-block',padding:'2px 8px',borderRadius:10,
+                          fontSize:10,fontWeight:600,background:'var(--accent)22',
+                          color:'var(--accent)',border:'1px solid var(--accent)44',
+                          whiteSpace:'nowrap',
+                        }}>{h.started_by || '—'}</span>
+                      </td>
+                    )}
+                    <td style={{maxWidth:200,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.message}</td>
                     <td><span className="badge badge-green">{h.sent}</span></td>
                     <td><span className={`badge ${h.failed>0?'badge-red':'badge-green'}`}>{h.failed}</span></td>
                     <td>{h.total}</td>
@@ -1383,46 +1647,71 @@ function HistoryPage() {
 }
 
 function App() {
-  const [user, setUser] = useState(null);
+  // appUser = { id, username, role } — app-level login via password
+  const [appUser, setAppUser] = useState(() => getAppUser());
+  // tgUser = { name, username } — Telegram session
+  const [tgUser, setTgUser] = useState(null);
   const [tab, setTab] = useState('chats');
   const [selected, setSelected] = useState([]);
-  const [checkingAuth, setCheckingAuth] = useState(false);
+  const [checkingTg, setCheckingTg] = useState(false);
   const [showSettings, setShowSettings] = useState(!sessionStorage.getItem('api_base'));
+  const [showAdmin, setShowAdmin] = useState(false);
 
-  const tryAutoLogin = useCallback(() => {
-    setCheckingAuth(true);
-    fetch(API_BASE + '/api/me')
+  const tryAutoTgLogin = useCallback(() => {
+    const tok = getSessionToken();
+    if (!tok) return;
+    setCheckingTg(true);
+    const url = API_BASE + '/api/me?session_token=' + encodeURIComponent(tok);
+    fetch(url, { headers: { 'Authorization': 'Bearer ' + getAppToken() } })
       .then(r => r.ok ? r.json() : null)
-      .then(me => { if (me && me.name) setUser(me); })
+      .then(me => { if (me && me.name) setTgUser(me); })
       .catch(() => {})
-      .finally(() => setCheckingAuth(false));
+      .finally(() => setCheckingTg(false));
   }, []);
 
-  const handleSettingsSave = () => {
-    setShowSettings(false);
-    tryAutoLogin();
-  };
+  const handleSettingsSave = () => { setShowSettings(false); tryAutoTgLogin(); };
 
   useEffect(() => {
-    if (!showSettings) tryAutoLogin();
-  }, []);
+    if (!showSettings && appUser) tryAutoTgLogin();
+  }, [appUser]);
+
+  const handleAppLogin = (u) => { setAppUser(u); };
+
+  const handleTgAuth = (me) => { setTgUser(me); };
 
   const doLogout = async () => {
-    await api.post('/api/logout', {});
+    const tok = getSessionToken();
+    if (tok) {
+      try { await fetch(API_BASE + '/api/logout?session_token=' + encodeURIComponent(tok), {
+        method: 'POST', headers: allHeaders({'Content-Type':'application/json'}), body: '{}'
+      }); } catch {}
+    }
     sessionStorage.removeItem('session_token');
-    setUser(null);
-    setSelected([]);
+    clearAppToken(); clearAppUserData();
+    setTgUser(null); setAppUser(null); setSelected([]);
   };
+
+  // Role helpers
+  const isAdmin = appUser?.role === 'admin';
 
   if (showSettings) return <SettingsScreen onSave={handleSettingsSave} />;
 
-  if (checkingAuth) return (
+  // Step 1: app login
+  if (!appUser) return <AppLoginScreen onLogin={handleAppLogin} />;
+
+  // Step 2: Telegram login
+  if (checkingTg) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',gap:12}}>
       <span className="spinner"/> <span style={{color:'var(--muted)'}}>Connecting...</span>
     </div>
   );
+  if (!tgUser) return <LoginPage onAuth={handleTgAuth} appUser={appUser} onAppLogout={()=>{clearAppToken();clearAppUserData();setAppUser(null);}} />;
 
-  if (!user) return <LoginPage onAuth={setUser} />;
+  const navTabs = [
+    ['chats', 'Chats'],
+    ['broadcast', 'Broadcast' + (selected.length ? ` (${selected.length})` : '')],
+    ['history', 'History'],
+  ];
 
   return (
     <>
@@ -1435,22 +1724,36 @@ function App() {
         </div>
         <div className="header-user">
           <div className="status-dot"/>
-          <span>{user.name || user.username}</span>
+          <span style={{fontWeight:600}}>{tgUser.name || tgUser.username}</span>
+          <span style={{
+            fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:10,
+            background: isAdmin ? 'var(--accent)22' : 'var(--surface2)',
+            color: isAdmin ? 'var(--accent)' : 'var(--muted)',
+            border: `1px solid ${isAdmin ? 'var(--accent)44' : 'var(--border)'}`,
+          }}>{appUser.username} · {appUser.role}</span>
           <span style={{color:'var(--border)'}}>|</span>
+          {isAdmin && (
+            <button className="btn btn-secondary btn-sm"
+              onClick={()=>setShowAdmin(true)}
+              style={{marginRight:4,color:'var(--accent)',borderColor:'var(--accent)44'}}>
+              Admin
+            </button>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={()=>setShowSettings(true)} style={{marginRight:4}}>Settings</button>
           <button className="btn btn-secondary btn-sm" onClick={doLogout}>Logout</button>
         </div>
       </div>
       <div className="nav">
-        {[['chats','Chats'], ['broadcast','Broadcast'+(selected.length?` (${selected.length})`:'')], ['history','History']].map(([k,l]) => (
+        {navTabs.map(([k,l]) => (
           <button key={k} className={`nav-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
       <div style={{flex:1,overflow:'auto'}}>
-        {tab === 'chats' && <ChatsPage selected={selected} setSelected={setSelected} />}
-        {tab === 'broadcast' && <BroadcastPage selected={selected} />}
-        {tab === 'history' && <HistoryPage />}
+        {tab === 'chats' && <ChatsPage selected={selected} setSelected={setSelected} appUser={appUser} />}
+        {tab === 'broadcast' && <BroadcastPage selected={selected} appUser={appUser} />}
+        {tab === 'history' && <HistoryPage appUser={appUser} />}
       </div>
+      {showAdmin && <AdminPanel appUser={appUser} onClose={()=>setShowAdmin(false)} />}
     </>
   );
 }
