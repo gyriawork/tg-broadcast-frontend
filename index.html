@@ -564,6 +564,58 @@ function AdminPanel({ appUser, onClose }) {
     </div>
   );
 }
+
+// ─── ChangeMyPasswordModal ────────────────────────────────────────────────
+function ChangeMyPasswordModal({ onClose }) {
+  const [oldPw, setOldPw] = React.useState('');
+  const [newPw, setNewPw] = React.useState('');
+  const [newPw2, setNewPw2] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [ok, setOk] = React.useState(false);
+
+  const doChange = async () => {
+    if (newPw !== newPw2) { setErr('New passwords do not match'); return; }
+    if (newPw.length < 6) { setErr('New password must be at least 6 characters'); return; }
+    setLoading(true); setErr('');
+    try {
+      await api.put('/api/auth/me/password', { old_password: oldPw, new_password: newPw });
+      setOk(true);
+    } catch(e) { setErr(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+      <div className="card" style={{width:360,maxWidth:'95vw'}}>
+        <div className="card-title" style={{marginBottom:16}}>Change My Password</div>
+        {ok ? (
+          <div>
+            <div className="alert alert-ok">Password changed successfully!</div>
+            <button className="btn btn-primary" style={{marginTop:12,width:'100%'}} onClick={onClose}>Close</button>
+          </div>
+        ) : (
+          <div>
+            <label>Current Password</label>
+            <input type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} style={{marginBottom:10}} />
+            <label>New Password</label>
+            <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} style={{marginBottom:10}} />
+            <label>Confirm New Password</label>
+            <input type="password" value={newPw2} onChange={e=>setNewPw2(e.target.value)} style={{marginBottom:10}} />
+            {err && <div className="alert alert-err" style={{marginBottom:10}}>{err}</div>}
+            <div className="row-gap">
+              <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={doChange} disabled={loading||!oldPw||!newPw||!newPw2}>
+                {loading ? <><span className="spinner"/> Saving...</> : 'Change Password'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoginPage({ onAuth, appUser, onAppLogout }) {
   const savedCreds = getTgCreds();
   const [step, setStep] = useState('config');
@@ -1080,7 +1132,7 @@ function TagManagerPanel({ onChanged }) {
 }
 
 // ─── ChatsPage ─────────────────────────────────────────────────────────────
-function ChatsPage({ selected, setSelected }) {
+function ChatsPage({ selected, setSelected, appUser }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -1095,12 +1147,31 @@ function ChatsPage({ selected, setSelected }) {
   const [filterTags, setFilterTags] = useState([]); // tag ids
   const [filterOwner, setFilterOwner] = useState(''); // owner string
 
-  useEffect(() => { loadLists(); }, []);
+  // admin: session picker
+  const isAdmin = appUser?.role === 'admin';
+  const [sessions, setSessions] = useState([]);
+  const [pickedSession, setPickedSession] = useState('');
+
+  useEffect(() => {
+    loadLists();
+    if (isAdmin) loadSessions();
+  }, []);
+
+  const loadSessions = async () => {
+    try {
+      const r = await api.get('/api/admin/sessions');
+      setSessions(r.sessions || []);
+    } catch {}
+  };
 
   const loadChats = async () => {
     setLoading(true); setErr('');
-    try { const r = await api.get('/api/chats' + sqt()); setChats(r.chats); }
-    catch(e) { setErr('Failed to load chats'); }
+    try {
+      const tok = pickedSession || getSessionToken();
+      const r = await api.get('/api/chats?session_token=' + encodeURIComponent(tok));
+      setChats(r.chats);
+    }
+    catch(e) { setErr('Failed to load chats: ' + e.message); }
     setLoading(false);
   };
 
@@ -1153,10 +1224,23 @@ function ChatsPage({ selected, setSelected }) {
       <div className="page">
         <div className="card">
           <div className="card-title">Load Chats</div>
-          <div style={{display:'flex',gap:10}}>
+          {isAdmin && sessions.length > 0 && (
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:'var(--muted)',marginBottom:4,display:'block'}}>Load chats from session:</label>
+              <select value={pickedSession} onChange={e=>setPickedSession(e.target.value)}
+                style={{background:'var(--surface2)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:6,padding:'6px 10px',width:'100%',fontSize:13}}>
+                <option value="">— My session —</option>
+                {sessions.map(s => (
+                  <option key={s.token} value={s.token}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
             <button className="btn btn-primary" onClick={loadChats} disabled={loading}>
-              {loading ? <><span className="spinner"/> Loading...</> : 'Load My Chats'}
+              {loading ? <><span className="spinner"/> Loading...</> : 'Load Chats'}
             </button>
+            {isAdmin && <button className="btn btn-secondary btn-sm" onClick={loadSessions} title="Refresh sessions list">↻</button>}
             {chats.length > 0 && <span style={{color:'var(--muted)',alignSelf:'center',fontSize:12}}>{chats.length} chats found</span>}
           </div>
           {err && <div className="alert alert-err" style={{marginTop:10}}>{err}</div>}
@@ -1661,6 +1745,7 @@ function App() {
   const [checkingTg, setCheckingTg] = useState(false);
   const [showSettings, setShowSettings] = useState(!(localStorage.getItem('api_base') || sessionStorage.getItem('api_base')));
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showChangePw, setShowChangePw] = useState(false);
 
   const tryAutoTgLogin = useCallback(async () => {
     const tok = getSessionToken();
@@ -1763,6 +1848,7 @@ function App() {
               Admin
             </button>
           )}
+          <button className="btn btn-secondary btn-sm" onClick={()=>setShowChangePw(true)} style={{marginRight:4}}>My Password</button>
           <button className="btn btn-secondary btn-sm" onClick={()=>setShowSettings(true)} style={{marginRight:4}}>Settings</button>
           <button className="btn btn-secondary btn-sm" onClick={doLogout}>Logout</button>
         </div>
@@ -1778,6 +1864,7 @@ function App() {
         {tab === 'history' && <HistoryPage appUser={appUser} />}
       </div>
       {showAdmin && <AdminPanel appUser={appUser} onClose={()=>setShowAdmin(false)} />}
+      {showChangePw && <ChangeMyPasswordModal onClose={()=>setShowChangePw(false)} />}
     </>
   );
 }
