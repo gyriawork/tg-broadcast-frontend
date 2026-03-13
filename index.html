@@ -616,6 +616,166 @@ function EditChatModal({ chat, onClose, onSave }) {
   );
 }
 
+// ─── BulkAssignPanel ────────────────────────────────────────────────────────
+function BulkAssignPanel({ selectedIds, onApplied }) {
+  const [owner, setOwner] = useState('');
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]); // [{id,name,color}]
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+  const [mode, setMode] = useState('add'); // 'add' | 'replace'
+  const [done, setDone] = useState('');
+  const [, forceUpdate] = useState(0);
+
+  const allGlobalTags = Object.values(globalTags);
+  const knownOwners = getAllOwners();
+  const hasTag = (tId) => selectedTags.some(t => t.id === tId);
+
+  const toggleTag = (t) => {
+    setSelectedTags(prev => prev.some(x => x.id === t.id)
+      ? prev.filter(x => x.id !== t.id)
+      : [...prev, t]);
+  };
+
+  const createAndAddTag = () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    const existing = allGlobalTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) { if (!hasTag(existing.id)) setSelectedTags(prev => [...prev, existing]); setNewTagName(''); return; }
+    const id = mkTagId();
+    const t = { id, name, color: newTagColor };
+    saveGlobalTag(t);
+    setSelectedTags(prev => [...prev, t]);
+    setNewTagName('');
+    setNewTagColor(TAG_COLORS[_tagSeq % TAG_COLORS.length]);
+    forceUpdate(n => n+1);
+  };
+
+  const apply = () => {
+    if (!owner.trim() && selectedTags.length === 0) return;
+    let count = 0;
+    for (const id of selectedIds) {
+      const meta = getChatMeta(id);
+      const newMeta = { ...meta };
+      if (owner.trim()) newMeta.owner = owner.trim();
+      if (selectedTags.length > 0) {
+        if (mode === 'replace') {
+          newMeta.tags = [...selectedTags];
+        } else {
+          // merge — add tags not already present
+          const existing = new Set(meta.tags.map(t => t.id));
+          newMeta.tags = [...meta.tags, ...selectedTags.filter(t => !existing.has(t.id))];
+        }
+      }
+      saveChatMeta(id, newMeta);
+      count++;
+    }
+    setDone(`Applied to ${count} chats`);
+    setTimeout(() => setDone(''), 2500);
+    onApplied && onApplied();
+  };
+
+  const ownerSuggestions = knownOwners.filter(o =>
+    o.toLowerCase().includes(owner.toLowerCase()) && o !== owner
+  );
+
+  const canApply = owner.trim() || selectedTags.length > 0;
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <label style={{marginBottom:0}}>
+          Bulk assign to <span style={{color:'var(--accent)',fontWeight:700}}>{selectedIds.length}</span> selected chats
+        </label>
+      </div>
+
+      {/* Owner */}
+      <div style={{marginBottom:12}}>
+        <span className="modal-label">Owner</span>
+        <div style={{position:'relative'}}>
+          <input type="text" placeholder="Set owner (leave blank to skip)"
+            value={owner}
+            onChange={e=>{setOwner(e.target.value);setOwnerOpen(true);}}
+            onFocus={()=>setOwnerOpen(true)}
+            onBlur={()=>setTimeout(()=>setOwnerOpen(false),150)}
+          />
+          {ownerOpen && ownerSuggestions.length > 0 && (
+            <div style={{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,zIndex:999,maxHeight:120,overflowY:'auto'}}>
+              {ownerSuggestions.map(o => (
+                <div key={o} onMouseDown={()=>{setOwner(o);setOwnerOpen(false);}}
+                  style={{padding:'7px 12px',cursor:'pointer',fontSize:13,color:'var(--text)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  {o}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div style={{marginBottom:8}}>
+        <span className="modal-label">Tags</span>
+
+        {/* existing global tags as toggles */}
+        {allGlobalTags.length > 0 && (
+          <div className="tag-palette" style={{marginBottom:8}}>
+            {allGlobalTags.map(t => (
+              <span key={t.id}
+                className="tag-chip removable"
+                style={{
+                  background: hasTag(t.id) ? t.color+'44' : t.color+'18',
+                  color: t.color,
+                  border: `1px solid ${hasTag(t.id) ? t.color : t.color+'44'}`,
+                  opacity: hasTag(t.id) ? 1 : 0.6,
+                  fontWeight: hasTag(t.id) ? 700 : 400,
+                }}
+                onClick={() => toggleTag(t)}>
+                {hasTag(t.id) ? '✓ ' : '+ '}{t.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* create new tag inline */}
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+          <input type="text" placeholder="New tag name" value={newTagName}
+            onChange={e=>setNewTagName(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&createAndAddTag()}
+            style={{flex:1}} />
+          <button className="btn btn-secondary btn-sm" onClick={createAndAddTag} disabled={!newTagName.trim()}>+ Add</button>
+        </div>
+        <div style={{display:'flex',gap:6,marginBottom:8}}>
+          {TAG_COLORS.map(c => (
+            <div key={c} className={`tag-dot ${newTagColor===c?'active':''}`}
+              style={{background:c}} onClick={()=>setNewTagColor(c)}/>
+          ))}
+        </div>
+
+        {/* merge mode */}
+        {selectedTags.length > 0 && (
+          <div style={{display:'flex',gap:8,marginBottom:6}}>
+            {['add','replace'].map(m => (
+              <label key={m} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,cursor:'pointer',color: mode===m ? 'var(--accent)' : 'var(--muted)'}}>
+                <input type="radio" checked={mode===m} onChange={()=>setMode(m)} style={{accentColor:'var(--accent)'}} />
+                {m === 'add' ? 'Add to existing tags' : 'Replace all tags'}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <button className="btn btn-primary btn-sm" onClick={apply} disabled={!canApply}>
+          Apply to {selectedIds.length} chats
+        </button>
+        {done && <span style={{fontSize:12,color:'var(--ok)'}}>{done}</span>}
+      </div>
+    </div>
+  );
+}
+
 // ─── TagManagerPanel ────────────────────────────────────────────────────────
 function TagManagerPanel({ onChanged }) {
   const [open, setOpen] = useState(false);
@@ -856,6 +1016,11 @@ function ChatsPage({ selected, setSelected }) {
             {selected.length > 0 && (
               <div style={{marginTop:14}}>
                 <div className="sep"/>
+                <BulkAssignPanel
+                  selectedIds={selected}
+                  onApplied={() => forceUpdate(n => n+1)}
+                />
+                <div className="sep" style={{marginTop:12}}/>
                 <label>Save selection as list</label>
                 <div className="row-gap">
                   <input type="text" placeholder="List name" value={saveListName} onChange={e=>setSaveListName(e.target.value)} style={{flex:1}} />
