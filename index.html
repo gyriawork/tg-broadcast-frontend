@@ -442,7 +442,7 @@ function AdminPanel({ appUser, onClose }) {
   const resetPassword = async (uid, uname) => {
     if (!window.confirm(`Reset password for "${uname}"?`)) return;
     try {
-      const r = await api.post('/api/auth/users/' + uid + '/password', {});
+      const r = await api.put('/api/auth/users/' + uid + '/password', {});
       setNewCreds({ username: uname, password: r.password, role: '' });
     } catch(e) { setErr(e.message); }
   };
