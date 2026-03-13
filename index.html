@@ -171,7 +171,57 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
 
-  body::before {
+  .attach-bar {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px;
+  }
+  .attach-preview {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  .attach-preview img {
+    max-height: 72px; max-width: 120px; border-radius: 4px;
+    border: 1px solid var(--border); object-fit: cover;
+  }
+  .attach-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .attach-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .attach-size { font-size: 11px; color: var(--muted); }
+  .attach-icon { font-size: 28px; line-height: 1; }
+
+  
+.slider-wrap { margin-top: 4px; }
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider-val { min-width: 52px; text-align: right; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; color: var(--accent); }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 2px;
+  background: var(--border); outline: none; cursor: pointer;
+  border: none; padding: 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  transition: transform .15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.risk-box {
+  margin-top: 12px; padding: 10px 14px;
+  border-radius: var(--radius); font-size: 12px;
+  display: flex; align-items: flex-start; gap: 8px;
+  transition: all .3s;
+}
+.risk-safe { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
+.risk-warn { background: rgba(255,204,0,0.08); border: 1px solid rgba(255,204,0,0.35); color: var(--yellow); }
+.risk-danger { background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.4); color: var(--red); }
+.risk-icon { font-size: 16px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+.risk-text { line-height: 1.5; }
+.risk-title { font-weight: 700; letter-spacing: 0.3px; }
+.risk-detail { font-size: 11px; margin-top: 2px; opacity: 0.85; }
+.slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
+
+body::before {
     content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.01) 2px, rgba(0,212,255,0.01) 4px);
     pointer-events: none; z-index: 9999;
@@ -195,15 +245,15 @@ function getApiBase() {
 let API_BASE = getApiBase();
 
 function getSessionToken() { return sessionStorage.getItem('session_token') || ''; }
-function sessionHeaders(extra = {}) {
+function sessionHeaders(extra) {
   const t = getSessionToken();
   return t ? { ...extra, 'X-Session-Token': t } : extra;
 }
-
 const api = {
-  get: (path) => fetch(API_BASE + path, { headers: sessionHeaders() }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
+  get: (path) => fetch(API_BASE + path, { headers: sessionHeaders({}) }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }),
   post: (path, body) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
-  del: (path) => fetch(API_BASE + path, { method:'DELETE', headers: sessionHeaders() }).then(r => r.json()),
+  upload: (path, formData) => fetch(API_BASE + path, { method:'POST', headers: sessionHeaders({}), body: formData }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  del: (path) => fetch(API_BASE + path, { method:'DELETE', headers: sessionHeaders({}) }).then(r => r.json()),
 };
 
 function SettingsScreen({ onSave }) {
@@ -488,8 +538,57 @@ function ChatsPage({ selected, setSelected }) {
   );
 }
 
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function AttachmentPreview({ file, onRemove }) {
+  const isImage = file.type.startsWith('image/');
+  const [imgUrl, setImgUrl] = React.useState(null);
+
+  useEffect(() => {
+    if (isImage) {
+      const url = URL.createObjectURL(file);
+      setImgUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file]);
+
+  const fileIcon = () => {
+    if (isImage) return null;
+    if (file.type === 'application/pdf') return '';
+    if (file.type.includes('zip') || file.type.includes('rar')) return '';
+    if (file.type.includes('video')) return '';
+    if (file.type.includes('audio')) return '';
+    return '';
+  };
+
+  return (
+    <div className="attach-preview">
+      {isImage && imgUrl
+        ? <img src={imgUrl} alt={file.name} />
+        : <span className="attach-icon">{fileIcon()}</span>
+      }
+      <div className="attach-info">
+        <div className="attach-name">{file.name}</div>
+        <div className="attach-size">{formatFileSize(file.size)}</div>
+      </div>
+      <button
+        className="btn btn-sm"
+        style={{background:'transparent',color:'var(--red)',border:'1px solid rgba(255,68,102,0.3)',flexShrink:0}}
+        onClick={onRemove}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
+
 function BroadcastPage({ selected }) {
   const [message, setMessage] = useState('');
+  const [attachment, setAttachment] = useState(null);
   const [delay, setDelay] = useState(5);
   const [randomDelay, setRandomDelay] = useState(false);
   const [maxPerMin, setMaxPerMin] = useState(10);
@@ -499,11 +598,9 @@ function BroadcastPage({ selected }) {
   const [tplName, setTplName] = useState('');
   const [tplMsg, setTplMsg] = useState('');
   const [tplTab, setTplTab] = useState(false);
-  const [attachedFile, setAttachedFile] = useState(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const fileInputRef = useRef(null);
   const logRef = useRef(null);
   const pollRef = useRef(null);
+  const attachRef = useRef(null);
 
   useEffect(() => { loadTemplates(); }, []);
   useEffect(() => {
@@ -524,9 +621,21 @@ function BroadcastPage({ selected }) {
   };
 
   const doStart = async () => {
-    if (!selected.length || (!message.trim() && !attachedFile)) return;
+    if (!selected.length || (!message.trim() && !attachment)) return;
+    let file_id = null;
+    if (attachment) {
+      const fd = new FormData();
+      fd.append('file', attachment, attachment.name);
+      const uploaded = await api.upload('/api/upload', fd);
+      file_id = uploaded.file_id ?? uploaded.id ?? uploaded.url ?? null;
+    }
     await api.post('/api/broadcast/start', {
-      chat_ids: selected, message, delay, random_delay: randomDelay, max_per_minute: maxPerMin
+      chat_ids: selected,
+      message,
+      delay,
+      random_delay: randomDelay,
+      max_per_minute: maxPerMin,
+      ...(file_id !== null && { file_id }),
     });
     startPoll();
   };
@@ -541,32 +650,18 @@ function BroadcastPage({ selected }) {
     setTplName(''); setTplMsg(''); loadTemplates();
   };
 
-  const doUploadFile = async (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    setUploadLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const resp = await fetch(getApiBase() + '/api/upload', { method: 'POST', body: fd });
-      const data = await resp.json();
-      if (data.uploaded) setAttachedFile({ name: data.name, size: data.size, mime: data.mime });
-    } catch(err) { console.error(err); }
-    setUploadLoading(false);
+    if (file) setAttachment(file);
     e.target.value = '';
   };
 
-  const doClearFile = async () => {
-    await api.del('/api/upload');
-    setAttachedFile(null);
+  const removeAttachment = () => {
+    setAttachment(null);
+    if (attachRef.current) attachRef.current.value = '';
   };
 
-  const formatSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-    return (bytes/1024/1024).toFixed(1) + ' MB';
-  };
-
+  const canStart = selected.length > 0 && (message.trim().length > 0 || attachment !== null);
   const progress = status ? Math.round((status.sent + status.failed) / (status.total || 1) * 100) : 0;
 
   return (
@@ -590,30 +685,30 @@ function BroadcastPage({ selected }) {
               <textarea placeholder="Type your broadcast message here..." value={message} onChange={e=>setMessage(e.target.value)} style={{minHeight:130}} />
               <div style={{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}}>{message.length} chars / {selected.length} chats selected</div>
 
-              <div style={{marginTop:14}}>
-                <label style={{marginTop:0}}>Attachment (image or file)</label>
-                {attachedFile ? (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--radius)'}}>
-                    <span style={{fontSize:20}}>{attachedFile.mime && attachedFile.mime.startsWith('image/') ? '[IMG]' : '[FILE]'}</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,color:'var(--text)'}}>{attachedFile.name}</div>
-                      <div style={{fontSize:11,color:'var(--muted)'}}>{formatSize(attachedFile.size)} - {attachedFile.mime}</div>
-                    </div>
-                    <button className="btn btn-secondary btn-sm" onClick={doClearFile} style={{color:'var(--red)'}}>Remove</button>
-                  </div>
-                ) : (
-                  <div
-                    style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg)',border:'1px dashed var(--border)',borderRadius:'var(--radius)',cursor:'pointer'}}
-                    onClick={()=>fileInputRef.current && fileInputRef.current.click()}
-                  >
-                    <span style={{color:'var(--muted)',fontSize:20}}>[+]</span>
-                    <span style={{color:'var(--muted)',fontSize:12}}>
-                      {uploadLoading ? 'Uploading...' : 'Click to attach image or file (optional)'}
-                    </span>
-                    <input ref={fileInputRef} type="file" style={{display:'none'}} onChange={doUploadFile} accept="image/*,video/*,application/pdf,.zip,.doc,.docx,.xls,.xlsx,.txt" />
-                  </div>
+              {/* Attachment section */}
+              <input
+                type="file"
+                ref={attachRef}
+                style={{display:'none'}}
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.7z"
+                onChange={handleFileChange}
+              />
+              <div className="attach-bar">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => attachRef.current && attachRef.current.click()}
+                  disabled={polling}
+                  style={attachment ? {borderColor:'var(--accent)',color:'var(--accent)'} : {}}
+                >
+                  {attachment ? 'Change File' : '+ Attach File'}
+                </button>
+                {!attachment && (
+                  <span style={{fontSize:11,color:'var(--muted)'}}>images, video, PDF, archives...</span>
                 )}
               </div>
+              {attachment && (
+                <AttachmentPreview file={attachment} onRemove={removeAttachment} />
+              )}
             </>
           ) : (
             <div>
@@ -643,32 +738,53 @@ function BroadcastPage({ selected }) {
         </div>
 
         <div className="card">
-          <div className="card-title">Broadcast Settings</div>
-          <div className="two-col">
-            <div>
-              <label>Delay (seconds)</label>
-              <input type="number" min="1" max="600" value={delay} onChange={e=>setDelay(Number(e.target.value))} />
-            </div>
-            <div>
-              <label>Max per minute</label>
-              <input type="number" min="1" max="30" value={maxPerMin} onChange={e=>setMaxPerMin(Number(e.target.value))} />
-            </div>
+        <div className="card-title">Broadcast Settings</div>
+
+        <label>Delay between messages</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="60" step="1" value={delay} onChange={e=>setDelay(Number(e.target.value))} />
+            <span className="slider-val">{delay}s</span>
           </div>
-          <div className="toggle-row">
-            <span className="toggle-label">Random delay (+0-10s)</span>
-            <label className="toggle">
-              <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
-              <span className="toggle-slider"/>
-            </label>
-          </div>
-          {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}-{delay+10}s between messages</div>}
+          <div className="slider-labels"><span>1s</span><span>15s</span><span>30s</span><span>60s</span></div>
         </div>
 
+        <label style={{marginTop:18}}>Max messages per minute</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="30" step="1" value={maxPerMin} onChange={e=>setMaxPerMin(Number(e.target.value))} />
+            <span className="slider-val">{maxPerMin}/m</span>
+          </div>
+          <div className="slider-labels"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+        </div>
+
+        {(()=>{
+          const safe = delay >= 15 && maxPerMin <= 5;
+          const danger = delay < 5 || maxPerMin > 15;
+          const warn = !safe && !danger && (delay < 8 || maxPerMin > 10);
+          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">[OK]</span><div className="risk-text"><div className="risk-title">Safe mode  low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
+          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">[!!]</span><div className="risk-text"><div className="risk-title">High risk  ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay  8s, max  10/min.</div></div></div>;
+          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">[!]</span><div className="risk-text"><div className="risk-title">Moderate risk  use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
+          return <div className="risk-box risk-safe"><span className="risk-icon">[OK]</span><div className="risk-text"><div className="risk-title">Normal mode  acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
+        })()}
+
+        <div className="toggle-row" style={{marginTop:14}}>
+          <span className="toggle-label">Random delay (+0-10s)</span>
+          <label className="toggle">
+            <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
+            <span className="toggle-slider"/>
+          </label>
+        </div>
+        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}{delay+10}s between messages</div>}
+      </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
             onClick={doStart}
-            disabled={polling || !selected.length || (!message.trim() && !attachedFile)}>
-            {polling ? <><span className="spinner"/> Broadcasting...</> : `Start Broadcast (${selected.length} chats${attachedFile ? ' + file' : ''})`}
+            disabled={polling || !canStart}>
+            {polling
+              ? <><span className="spinner"/> Broadcasting...</>
+              : `Start Broadcast (${selected.length} chats${attachment ? ' + file' : ''})`
+            }
           </button>
           {polling && (
             <button className="btn btn-danger" onClick={doStop}>Stop</button>
@@ -772,7 +888,9 @@ function App() {
 
   const doLogout = async () => {
     await api.post('/api/logout', {});
-    setUser(null); setSelected([]);
+    sessionStorage.removeItem('session_token');
+    setUser(null);
+    setSelected([]);
   };
 
   if (showSettings) return <SettingsScreen onSave={handleSettingsSave} />;
