@@ -416,7 +416,7 @@ function AdminPanel({ appUser, onClose }) {
 
   const loadUsers = async () => {
     setLoading(true);
-    try { const r = await api.get('/api/users'); setUsers(r.users); }
+    try { const r = await api.get('/api/auth/users'); setUsers(r.users); }
     catch(e) { setErr('Failed to load users'); }
     setLoading(false);
   };
@@ -425,7 +425,7 @@ function AdminPanel({ appUser, onClose }) {
     if (!newUsername.trim()) return;
     setCreating(true); setErr(''); setMsg('');
     try {
-      const r = await api.post('/api/users', { username: newUsername.trim(), role: newRole });
+      const r = await api.post('/api/auth/users', { username: newUsername.trim(), role: newRole });
       setNewCreds({ username: r.username, password: r.password, role: r.role });
       setNewUsername(''); setNewRole('user');
       loadUsers();
@@ -435,14 +435,14 @@ function AdminPanel({ appUser, onClose }) {
 
   const deleteUser = async (uid, uname) => {
     if (!window.confirm(`Delete user "${uname}"?`)) return;
-    try { await api.del('/api/users/' + uid); loadUsers(); setMsg('User deleted'); }
+    try { await api.del('/api/auth/users/' + uid); loadUsers(); setMsg('User deleted'); }
     catch(e) { setErr(e.message); }
   };
 
   const resetPassword = async (uid, uname) => {
     if (!window.confirm(`Reset password for "${uname}"?`)) return;
     try {
-      const r = await api.post('/api/users/' + uid + '/reset-password', {});
+      const r = await api.post('/api/auth/users/' + uid + '/password', {});
       setNewCreds({ username: uname, password: r.password, role: '' });
     } catch(e) { setErr(e.message); }
   };
