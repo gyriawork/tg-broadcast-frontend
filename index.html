@@ -552,11 +552,11 @@ function AttachmentPreview({ file, onRemove }) {
 
   const fileIcon = () => {
     if (isImage) return null;
-    if (file.type === 'application/pdf') return 'ð';
-    if (file.type.includes('zip') || file.type.includes('rar')) return 'ðï¸';
-    if (file.type.includes('video')) return 'ð¬';
-    if (file.type.includes('audio')) return 'ðµ';
-    return 'ð';
+    if (file.type === 'application/pdf') return 'Ã°ÂÂÂ';
+    if (file.type.includes('zip') || file.type.includes('rar')) return 'Ã°ÂÂÂÃ¯Â¸Â';
+    if (file.type.includes('video')) return 'Ã°ÂÂÂ¬';
+    if (file.type.includes('audio')) return 'Ã°ÂÂÂµ';
+    return 'Ã°ÂÂÂ';
   };
 
   return (
@@ -732,27 +732,45 @@ function BroadcastPage({ selected }) {
         </div>
 
         <div className="card">
-          <div className="card-title">Broadcast Settings</div>
-          <div className="two-col">
-            <div>
-              <label>Delay (seconds)</label>
-              <input type="number" min="1" max="600" value={delay} onChange={e=>setDelay(Number(e.target.value))} />
-            </div>
-            <div>
-              <label>Max per minute</label>
-              <input type="number" min="1" max="30" value={maxPerMin} onChange={e=>setMaxPerMin(Number(e.target.value))} />
-            </div>
+        <div className="card-title">Broadcast Settings</div>
+
+        <label>Delay between messages</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="60" step="1" value={delay} onChange={e=>setDelay(Number(e.target.value))} />
+            <span className="slider-val">{delay}s</span>
           </div>
-          <div className="toggle-row">
-            <span className="toggle-label">Random delay (+0-10s)</span>
-            <label className="toggle">
-              <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
-              <span className="toggle-slider"/>
-            </label>
-          </div>
-          {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}-{delay+10}s between messages</div>}
+          <div className="slider-labels"><span>1s</span><span>15s</span><span>30s</span><span>60s</span></div>
         </div>
 
+        <label style={{marginTop:18}}>Max messages per minute</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="30" step="1" value={maxPerMin} onChange={e=>setMaxPerMin(Number(e.target.value))} />
+            <span className="slider-val">{maxPerMin}/m</span>
+          </div>
+          <div className="slider-labels"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+        </div>
+
+        {(()=>{
+          const safe = delay >= 15 && maxPerMin <= 5;
+          const danger = delay < 5 || maxPerMin > 15;
+          const warn = !safe && !danger && (delay < 8 || maxPerMin > 10);
+          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">✅</span><div className="risk-text"><div className="risk-title">Safe mode — low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
+          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">🚫</span><div className="risk-text"><div className="risk-title">High risk — ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay ≥ 8s, max ≤ 10/min.</div></div></div>;
+          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">⚠️</span><div className="risk-text"><div className="risk-title">Moderate risk — use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
+          return <div className="risk-box risk-safe"><span className="risk-icon">✅</span><div className="risk-text"><div className="risk-title">Normal mode — acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
+        })()}
+
+        <div className="toggle-row" style={{marginTop:14}}>
+          <span className="toggle-label">Random delay (+0-10s)</span>
+          <label className="toggle">
+            <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
+            <span className="toggle-slider"/>
+          </label>
+        </div>
+        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}–{delay+10}s between messages</div>}
+      </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
             onClick={doStart}
