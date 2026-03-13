@@ -557,11 +557,11 @@ function AttachmentPreview({ file, onRemove }) {
 
   const fileIcon = () => {
     if (isImage) return null;
-    if (file.type === 'application/pdf') return 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ';
-    if (file.type.includes('zip') || file.type.includes('rar')) return 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ';
-    if (file.type.includes('video')) return 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¬';
-    if (file.type.includes('audio')) return 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂµ';
-    return 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ';
+    if (file.type === 'application/pdf') return 'ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ';
+    if (file.type.includes('zip') || file.type.includes('rar')) return 'ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¸ÃÂÃÂÃÂÃÂ';
+    if (file.type.includes('video')) return 'ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬';
+    if (file.type.includes('audio')) return 'ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂµ';
+    return 'ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ';
   };
 
   return (
@@ -761,10 +761,10 @@ function BroadcastPage({ selected }) {
           const safe = delay >= 15 && maxPerMin <= 5;
           const danger = delay < 5 || maxPerMin > 15;
           const warn = !safe && !danger && (delay < 8 || maxPerMin > 10);
-          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">Ã¢ÂÂ</span><div className="risk-text"><div className="risk-title">Safe mode Ã¢ÂÂ low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
-          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">Ã°ÂÂÂ«</span><div className="risk-text"><div className="risk-title">High risk Ã¢ÂÂ ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay Ã¢ÂÂ¥ 8s, max Ã¢ÂÂ¤ 10/min.</div></div></div>;
-          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">Ã¢ÂÂ Ã¯Â¸Â</span><div className="risk-text"><div className="risk-title">Moderate risk Ã¢ÂÂ use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
-          return <div className="risk-box risk-safe"><span className="risk-icon">Ã¢ÂÂ</span><div className="risk-text"><div className="risk-title">Normal mode Ã¢ÂÂ acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
+          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">ÃÂ¢ÃÂÃÂ</span><div className="risk-text"><div className="risk-title">Safe mode ÃÂ¢ÃÂÃÂ low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
+          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">ÃÂ°ÃÂÃÂÃÂ«</span><div className="risk-text"><div className="risk-title">High risk ÃÂ¢ÃÂÃÂ ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay ÃÂ¢ÃÂÃÂ¥ 8s, max ÃÂ¢ÃÂÃÂ¤ 10/min.</div></div></div>;
+          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ</span><div className="risk-text"><div className="risk-title">Moderate risk ÃÂ¢ÃÂÃÂ use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
+          return <div className="risk-box risk-safe"><span className="risk-icon">ÃÂ¢ÃÂÃÂ</span><div className="risk-text"><div className="risk-title">Normal mode ÃÂ¢ÃÂÃÂ acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
         })()}
 
         <div className="toggle-row" style={{marginTop:14}}>
@@ -774,7 +774,7 @@ function BroadcastPage({ selected }) {
             <span className="toggle-slider"/>
           </label>
         </div>
-        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}Ã¢ÂÂ{delay+10}s between messages</div>}
+        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}ÃÂ¢ÃÂÃÂ{delay+10}s between messages</div>}
       </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
