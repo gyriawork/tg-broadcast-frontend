@@ -569,7 +569,7 @@ function LoginPage({ onAuth, appUser, onAppLogout }) {
   const [step, setStep] = useState('config');
   const [apiId, setApiId] = useState(savedCreds?.apiId || '');
   const [apiHash, setApiHash] = useState(savedCreds?.apiHash || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(localStorage.getItem('tgb_phone') || '');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -594,6 +594,7 @@ function LoginPage({ onAuth, appUser, onAppLogout }) {
     setLoading(true); setErr('');
     try {
       await api.post('/api/send_code' + qs(), { phone });
+      localStorage.setItem('tgb_phone', phone);
       setStep('code'); setMsg('Code sent to your Telegram!');
     } catch(e) { setErr('Failed to send code'); }
     setLoading(false);
@@ -1683,8 +1684,10 @@ function App() {
         if (r2.authorized) {
           const qs2 = r2.session_token ? '?session_token=' + encodeURIComponent(r2.session_token) : '';
           const me2 = await api.get('/api/me' + qs2);
-          if (me2 && me2.name) setTgUser(me2);
+          if (me2 && me2.name) { setTgUser(me2); setCheckingTg(false); return; }
         }
+        // Not authorized — session file gone, need re-auth (can't skip SMS)
+        // But phone is pre-filled so user just clicks Send Code
       }
     } catch {}
     setCheckingTg(false);
@@ -1707,7 +1710,7 @@ function App() {
         method: 'POST', headers: allHeaders({'Content-Type':'application/json'}), body: '{}'
       }); } catch {}
     }
-    clearSessionToken();
+    clearSessionToken(); localStorage.removeItem('tgb_phone');
     clearAppToken(); clearAppUserData();
     setTgUser(null); setAppUser(null); setSelected([]);
   };
