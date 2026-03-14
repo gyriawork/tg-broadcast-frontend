@@ -1998,13 +1998,15 @@ function SettingsPage({ appUser, onLogout }) {
     }}>{role}</span>
   );
 
-  const SECTIONS = [
+  const SECTIONS_BASE = [
     { key: 'password', label: '🔑 My Password' },
-    ...(isAdmin ? [{ key: 'users', label: '👥 User Management' }] : []),
     { key: 'backend', label: '🌐 Backend URL' },
     { key: 'tg', label: '📱 Telegram Session' },
     { key: 'danger', label: '🚪 Logout' },
   ];
+  const SECTIONS = isAdmin
+    ? [SECTIONS_BASE[0], { key: 'users', label: '👥 User Management' }].concat(SECTIONS_BASE.slice(1))
+    : SECTIONS_BASE;
 
   const sectionStyle = { display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 560 };
   const headerStyle = { fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
