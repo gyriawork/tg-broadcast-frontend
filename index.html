@@ -179,6 +179,7 @@
   .badge-blue { background: rgba(0,212,255,0.15); color: var(--accent); }
   .badge-green { background: rgba(0,255,136,0.12); color: var(--green); }
   .badge-red { background: rgba(255,68,102,0.12); color: var(--red); }
+  .badge-purple { background: rgba(180,100,255,0.15); color: #b464ff; }
 
   table { width: 100%; border-collapse: collapse; }
   th { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -1336,7 +1337,7 @@ function ChatsPage({ selected, setSelected, appUser }) {
                     <div className="chat-info">
                       <div className="chat-name">{c.name}</div>
                       <div className="chat-meta">
-                        <span className={`badge badge-${c.type==='channel'?'blue':'green'}`}>{c.type}</span>
+                        <span className={`badge badge-${c.type==='channel'?'blue':c.type==='user'?'purple':'green'}`}>{c.type==='user'?'DM':c.type}</span>
                         {c.members && <span>{c.members.toLocaleString()} members</span>}
                         {meta.owner && (
                           <span className="owner-chip">
