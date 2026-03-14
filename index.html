@@ -1595,6 +1595,7 @@ function BroadcastPage({ selected }) {
 
   const doStart = async () => {
     if (!selected.length || (!message.trim() && !attachment)) return;
+    if (message.length > 4096) { alert('Message exceeds 4096 characters (Telegram limit). Please shorten it.'); return; }
     let file_id = null;
     if (attachment) {
       const fd = new FormData();
