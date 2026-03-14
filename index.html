@@ -239,7 +239,7 @@ function getApiBase() {
   let base = sessionStorage.getItem('api_base');
   if (base) return base;
   // Иначе — дефолт для локального запуска
-  return 'http://localhost:8000';
+  return 'https://web-production-b8b8b.up.railway.app';
 }
 let API_BASE = getApiBase();
 
