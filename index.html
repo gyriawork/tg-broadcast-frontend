@@ -1888,6 +1888,371 @@ function HistoryPage({ appUser }) {
   );
 }
 
+
+// ─── SettingsPage ─────────────────────────────────────────────────────────────
+function SettingsPage({ appUser, onLogout }) {
+  const isAdmin = appUser?.role === 'admin';
+  const [section, setSection] = useState('password'); // 'password' | 'users' | 'backend' | 'tg'
+
+  // ── Change My Password state ──
+  const [oldPw, setOldPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwErr, setPwErr] = useState('');
+  const [pwOk, setPwOk] = useState(false);
+
+  const doChangePw = async () => {
+    if (newPw !== newPw2) { setPwErr('New passwords do not match'); return; }
+    if (newPw.length < 6) { setPwErr('Password must be at least 6 characters'); return; }
+    setPwLoading(true); setPwErr('');
+    try {
+      await api.put('/api/auth/me/password', { old_password: oldPw, new_password: newPw });
+      setPwOk(true); setOldPw(''); setNewPw(''); setNewPw2('');
+    } catch(e) { setPwErr(e.message); }
+    setPwLoading(false);
+  };
+
+  // ── User Management state (admin only) ──
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [creating, setCreating] = useState(false);
+  const [userMsg, setUserMsg] = useState('');
+  const [userErr, setUserErr] = useState('');
+  const [newCreds, setNewCreds] = useState(null);
+
+  useEffect(() => {
+    if (section === 'users' && isAdmin) loadUsers();
+  }, [section]);
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try { const r = await api.get('/api/auth/users'); setUsers(r.users); }
+    catch { setUserErr('Failed to load users'); }
+    setUsersLoading(false);
+  };
+
+  const createUser = async () => {
+    if (!newUsername.trim()) return;
+    setCreating(true); setUserErr(''); setUserMsg('');
+    try {
+      const r = await api.post('/api/auth/users', { username: newUsername.trim(), role: newRole });
+      setNewCreds({ username: r.username, password: r.password, role: r.role });
+      setNewUsername(''); setNewRole('user'); loadUsers();
+    } catch(e) { setUserErr(e.message); }
+    setCreating(false);
+  };
+
+  const deleteUser = async (uid, uname) => {
+    if (!window.confirm(`Delete user "${uname}"?`)) return;
+    try { await api.del('/api/auth/users/' + uid); loadUsers(); setUserMsg('User deleted'); }
+    catch(e) { setUserErr(e.message); }
+  };
+
+  const resetPassword = async (uid, uname) => {
+    if (!window.confirm(`Reset password for "${uname}"?`)) return;
+    try {
+      const r = await api.put('/api/auth/users/' + uid + '/password', {});
+      setNewCreds({ username: uname, password: r.password, role: '' });
+    } catch(e) { setUserErr(e.message); }
+  };
+
+  // ── Backend URL state ──
+  const [backendUrl, setBackendUrl] = useState(API_BASE);
+  const [urlTesting, setUrlTesting] = useState(false);
+  const [urlErr, setUrlErr] = useState('');
+  const [urlOk, setUrlOk] = useState(false);
+
+  const testUrl = async () => {
+    setUrlTesting(true); setUrlErr(''); setUrlOk(false);
+    try {
+      const r = await fetch(backendUrl.replace(/\/$/, '') + '/health');
+      if (r.ok) setUrlOk(true); else setUrlErr('Server error: ' + r.status);
+    } catch { setUrlErr('Cannot connect. Check the URL.'); }
+    setUrlTesting(false);
+  };
+
+  const saveUrl = () => {
+    const clean = backendUrl.replace(/\/$/, '');
+    localStorage.setItem('api_base', clean); sessionStorage.setItem('api_base', clean);
+    API_BASE = clean;
+    setUrlOk(true);
+  };
+
+  // ── TG Session ──
+  const clearTgSession = () => {
+    clearSessionToken();
+    localStorage.removeItem('tgb_phone');
+    localStorage.removeItem('tgb_tg_creds');
+    setUserMsg('TG session cleared. Reload to re-login.');
+  };
+
+  const roleBadge = (role) => (
+    <span style={{
+      display:'inline-block', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700,
+      background: role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+      color: role==='admin' ? 'var(--accent)' : 'var(--muted)',
+      border: `1px solid ${role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+    }}>{role}</span>
+  );
+
+  const SECTIONS = [
+    { key: 'password', label: '🔑 My Password' },
+    ...(isAdmin ? [{ key: 'users', label: '👥 User Management' }] : []),
+    { key: 'backend', label: '🌐 Backend URL' },
+    { key: 'tg', label: '📱 Telegram Session' },
+    { key: 'danger', label: '🚪 Logout' },
+  ];
+
+  const sectionStyle = { display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 560 };
+  const headerStyle = { fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
+  const subStyle = { fontSize: 12, color: 'var(--muted)', marginBottom: 18 };
+
+  return (
+    <div style={{ display: 'flex', gap: 0, minHeight: '100%' }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 200, minHeight: '100%', background: 'var(--surface2)',
+        borderRight: '1px solid var(--border)', padding: '24px 0', flexShrink: 0,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', padding: '0 20px', marginBottom: 12, letterSpacing: '0.1em' }}>
+          SETTINGS
+        </div>
+        {SECTIONS.map(s => (
+          <button key={s.key} onClick={() => setSection(s.key)}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '10px 20px', fontSize: 13, fontWeight: section === s.key ? 700 : 400,
+              color: section === s.key ? 'var(--accent)' : 'var(--text)',
+              background: section === s.key ? 'var(--accent)11' : 'transparent',
+              borderLeft: section === s.key ? '3px solid var(--accent)' : '3px solid transparent',
+              border: 'none', borderLeft: section === s.key ? '3px solid var(--accent)' : '3px solid transparent',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+
+        {/* ── My Password ── */}
+        {section === 'password' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Change My Password</div>
+              <div style={subStyle}>Update your login password. Minimum 6 characters.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              {pwOk ? (
+                <div>
+                  <div className="alert alert-ok" style={{ marginBottom: 12 }}>Password changed successfully!</div>
+                  <button className="btn btn-secondary" onClick={() => setPwOk(false)}>Change again</button>
+                </div>
+              ) : (
+                <>
+                  <label>Current Password</label>
+                  <input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)} style={{ marginBottom: 12 }} />
+                  <label>New Password</label>
+                  <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} style={{ marginBottom: 12 }} />
+                  <label>Confirm New Password</label>
+                  <input type="password" value={newPw2} onChange={e => setNewPw2(e.target.value)} style={{ marginBottom: 12 }} />
+                  {pwErr && <div className="alert alert-err" style={{ marginBottom: 12 }}>{pwErr}</div>}
+                  <button className="btn btn-primary" onClick={doChangePw}
+                    disabled={pwLoading || !oldPw || !newPw || !newPw2}>
+                    {pwLoading ? <><span className="spinner" /> Saving...</> : 'Save New Password'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── User Management (admin) ── */}
+        {section === 'users' && isAdmin && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>User Management</div>
+              <div style={subStyle}>Create users, reset passwords, manage roles.</div>
+            </div>
+
+            {userErr && <div className="alert alert-err">{userErr}</div>}
+            {userMsg && <div className="alert alert-ok">{userMsg}</div>}
+
+            {/* New credentials */}
+            {newCreds && (
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--accent)44', borderRadius: 'var(--radius)', padding: 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginBottom: 8 }}>
+                  {newCreds.role ? 'User created' : 'Password reset'} — save these credentials!
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 4 }}>
+                  <span style={{ color: 'var(--muted)' }}>Username: </span>
+                  <span style={{ color: 'var(--text)', fontWeight: 700 }}>{newCreds.username}</span>
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 12 }}>
+                  <span style={{ color: 'var(--muted)' }}>Password: </span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.05em' }}>{newCreds.password}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
+                    navigator.clipboard.writeText(`Username: ${newCreds.username}\nPassword: ${newCreds.password}`);
+                    setUserMsg('Copied!'); setTimeout(() => setUserMsg(''), 1500);
+                  }}>Copy</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setNewCreds(null)}>Dismiss</button>
+                </div>
+              </div>
+            )}
+
+            {/* Create user */}
+            <div className="card" style={{ padding: 16 }}>
+              <div className="card-title" style={{ marginBottom: 12 }}>Create New User</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label>Username</label>
+                  <input type="text" placeholder="username" value={newUsername}
+                    onChange={e => setNewUsername(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && createUser()} />
+                </div>
+                <div>
+                  <label>Role</label>
+                  <select value={newRole} onChange={e => setNewRole(e.target.value)}
+                    style={{ display: 'block', background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '8px 12px', fontSize: 13, cursor: 'pointer' }}>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <button className="btn btn-primary btn-sm" onClick={createUser} disabled={creating || !newUsername.trim()}>
+                  {creating ? <span className="spinner" /> : '+ Create'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>Password will be auto-generated and shown once.</div>
+            </div>
+
+            {/* Users list */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div className="card-title" style={{ margin: 0 }}>All Users</div>
+              </div>
+              <div>
+                {usersLoading ? (
+                  <div style={{ textAlign: 'center', padding: 24 }}><span className="spinner" /></div>
+                ) : users.map(u => (
+                  <div key={u.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    borderBottom: '1px solid var(--border)',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{u.username}</span>
+                        {roleBadge(u.role)}
+                        {String(u.id) === String(appUser.id) && (
+                          <span style={{ fontSize: 10, color: 'var(--accent)' }}>(you)</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        Created {u.created_at ? u.created_at.slice(0, 10) : '—'}
+                      </div>
+                    </div>
+                    {String(u.id) !== String(appUser.id) && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-secondary btn-sm"
+                          onClick={() => resetPassword(u.id, u.username)}
+                          style={{ fontSize: 11, padding: '3px 8px' }}>
+                          Reset PW
+                        </button>
+                        <button className="btn btn-secondary btn-sm"
+                          onClick={() => deleteUser(u.id, u.username)}
+                          style={{ fontSize: 11, padding: '3px 8px', color: 'var(--err)' }}>
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Backend URL ── */}
+        {section === 'backend' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Backend URL</div>
+              <div style={subStyle}>The Railway backend address. Change only if you moved the deployment.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <label>Backend URL</label>
+              <input type="text" placeholder="https://your-app.railway.app"
+                value={backendUrl} onChange={e => { setBackendUrl(e.target.value); setUrlOk(false); setUrlErr(''); }} />
+              {urlErr && <div className="alert alert-err" style={{ marginTop: 8 }}>{urlErr}</div>}
+              {urlOk && <div className="alert alert-ok" style={{ marginTop: 8 }}>✓ Saved & reachable</div>}
+              <div className="row-gap" style={{ marginTop: 14 }}>
+                <button className="btn btn-secondary" onClick={testUrl} disabled={urlTesting || !backendUrl}>
+                  {urlTesting ? <><span className="spinner" /> Checking...</> : 'Test Connection'}
+                </button>
+                <button className="btn btn-primary" onClick={saveUrl} disabled={!backendUrl}>Save</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Telegram Session ── */}
+        {section === 'tg' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Telegram Session</div>
+              <div style={subStyle}>Your saved Telegram credentials and session token.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontFamily: 'monospace', fontSize: 12, marginBottom: 10 }}>
+                <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Session Token</div>
+                <div style={{ color: 'var(--text)', wordBreak: 'break-all', background: 'var(--surface2)', padding: '8px 10px', borderRadius: 6 }}>
+                  {getSessionToken() || '(none)'}
+                </div>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: 12, marginBottom: 16 }}>
+                <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Phone</div>
+                <div style={{ color: 'var(--text)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: 6 }}>
+                  {localStorage.getItem('tgb_phone') || '(none)'}
+                </div>
+              </div>
+              {userMsg && <div className="alert alert-ok" style={{ marginBottom: 12 }}>{userMsg}</div>}
+              <button className="btn btn-secondary" onClick={clearTgSession}
+                style={{ color: 'var(--err)', borderColor: 'var(--err)44' }}>
+                Clear Session & Re-login
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Logout ── */}
+        {section === 'danger' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Sign Out</div>
+              <div style={subStyle}>Logs you out from both the app and Telegram session.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+                You will be returned to the login screen. Your Telegram session will be closed.
+              </p>
+              <button className="btn btn-secondary" onClick={onLogout}
+                style={{ color: 'var(--err)', borderColor: 'var(--err)44' }}>
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
 function App() {
   // appUser = { id, username, role } — app-level login via password
   const [appUser, setAppUser] = useState(() => getAppUser());
@@ -1896,9 +2261,7 @@ function App() {
   const [tab, setTab] = useState('chats');
   const [selected, setSelected] = useState([]);
   const [checkingTg, setCheckingTg] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showChangePw, setShowChangePw] = useState(false);
+
 
   const tryAutoTgLogin = useCallback(async () => {
     const tok = getSessionToken();
@@ -1931,7 +2294,7 @@ function App() {
     setCheckingTg(false);
   }, []);
 
-  const handleSettingsSave = () => { setShowSettings(false); tryAutoTgLogin(); };
+
 
   useEffect(() => {
     if (!showSettings && appUser) tryAutoTgLogin();
@@ -1956,7 +2319,7 @@ function App() {
   // Role helpers
   const isAdmin = appUser?.role === 'admin';
 
-  if (showSettings) return <SettingsScreen onSave={handleSettingsSave} />;
+
 
   // Step 1: app login
   if (!appUser) return <AppLoginScreen onLogin={handleAppLogin} />;
@@ -1973,6 +2336,7 @@ function App() {
     ['chats', 'Chats'],
     ['broadcast', 'Broadcast' + (selected.length ? ` (${selected.length})` : '')],
     ['history', 'History'],
+    ['settings', '⚙ Settings'],
   ];
 
   return (
@@ -1994,15 +2358,7 @@ function App() {
             border: `1px solid ${isAdmin ? 'var(--accent)44' : 'var(--border)'}`,
           }}>{appUser.username} · {appUser.role}</span>
           <span style={{color:'var(--border)'}}>|</span>
-          {isAdmin && (
-            <button className="btn btn-secondary btn-sm"
-              onClick={()=>setShowAdmin(true)}
-              style={{marginRight:4,color:'var(--accent)',borderColor:'var(--accent)44'}}>
-              Admin
-            </button>
-          )}
-          <button className="btn btn-secondary btn-sm" onClick={()=>setShowChangePw(true)} style={{marginRight:4}}>My Password</button>
-          <button className="btn btn-secondary btn-sm" onClick={()=>setShowSettings(true)} style={{marginRight:4}}>Settings</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setTab('settings')} style={{marginRight:4}}>⚙ Settings</button>
           <button className="btn btn-secondary btn-sm" onClick={doLogout}>Logout</button>
         </div>
       </div>
@@ -2015,9 +2371,8 @@ function App() {
         {tab === 'chats' && <ChatsPage selected={selected} setSelected={setSelected} appUser={appUser} />}
         {tab === 'broadcast' && <BroadcastPage selected={selected} appUser={appUser} />}
         {tab === 'history' && <HistoryPage appUser={appUser} />}
+        {tab === 'settings' && <SettingsPage appUser={appUser} onLogout={doLogout} />}
       </div>
-      {showAdmin && <AdminPanel appUser={appUser} onClose={()=>setShowAdmin(false)} />}
-      {showChangePw && <ChangeMyPasswordModal onClose={()=>setShowChangePw(false)} />}
     </>
   );
 }
