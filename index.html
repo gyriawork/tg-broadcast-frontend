@@ -2307,7 +2307,7 @@ function App() {
 
 
   useEffect(() => {
-    if (!showSettings && appUser) tryAutoTgLogin();
+    if (appUser) tryAutoTgLogin();
   }, [appUser]);
 
   const handleAppLogin = (u) => { setAppUser(u); };
