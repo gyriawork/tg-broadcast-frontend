@@ -1158,6 +1158,8 @@ function ChatsPage({ selected, setSelected, appUser }) {
 
   // admin: session picker
   const isAdmin = appUser?.role === 'admin';
+  // Expose setTab globally for cross-component navigation (sticky bar in ChatsPage)
+  useEffect(() => { window.__setAppTab = setTab; return () => { delete window.__setAppTab; }; }, [setTab]);
   const [sessions, setSessions] = useState([]);
   const [pickedSession, setPickedSession] = useState('');
 
@@ -1317,8 +1319,15 @@ function ChatsPage({ selected, setSelected, appUser }) {
               </div>
             )}
 
-            <div className="search-row">
-              <input type="text" placeholder="Search chats..." value={search} onChange={e=>setSearch(e.target.value)} />
+            <div className="search-row" style={{position:'relative'}}>
+              <input type="text" placeholder="Search chats..." value={search} onChange={e=>setSearch(e.target.value)} style={{paddingRight: search ? 28 : undefined}} />
+              {search && (
+                <button onClick={()=>setSearch('')} style={{
+                  position:'absolute', right:8, top:'50%', transform:'translateY(-50%)',
+                  background:'none', border:'none', cursor:'pointer', color:'var(--muted)',
+                  fontSize:16, lineHeight:1, padding:'0 2px'
+                }}>×</button>
+              )}
             </div>
 
             <div style={{fontSize:11,color:'var(--muted)',marginBottom:6}}>
@@ -1421,6 +1430,24 @@ function ChatsPage({ selected, setSelected, appUser }) {
           onClose={() => setEditChat(null)}
           onSave={() => forceUpdate(n => n+1)}
         />
+      )}
+      {selected.length > 0 && (
+        <div style={{
+          position:'sticky', bottom:0, background:'var(--surface)',
+          borderTop:'1px solid var(--border)', padding:'10px 24px',
+          display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:10,
+        }}>
+          <span style={{fontSize:13, color:'var(--text)'}}>
+            <strong style={{color:'var(--accent)'}}>{selected.length}</strong> chats selected
+          </span>
+          <div style={{display:'flex', gap:8}}>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setSelected([])}>Clear</button>
+            <button className="btn btn-primary btn-sm"
+              onClick={()=>{ if(window.__setAppTab) window.__setAppTab('broadcast'); }}>
+              Go to Broadcast →
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1629,8 +1656,32 @@ function BroadcastPage({ selected }) {
 
           {!tplTab ? (
             <>
-              <textarea placeholder="Type your broadcast message here..." value={message} onChange={e=>setMessage(e.target.value)} style={{minHeight:130}} />
-              <div style={{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}}>{message.length} chars / {selected.length} chats selected</div>
+              <div style={{display:'flex',gap:8}}>
+                <textarea placeholder="Type your broadcast message here..." value={message} onChange={e=>setMessage(e.target.value)} maxLength={4200}
+                  style={{minHeight:130, flex:1, borderColor: message.length > 4096 ? 'var(--err)' : undefined}} />
+                {message && (
+                  <div style={{flex:1, minHeight:130, background:'var(--surface2)', border:'1px solid var(--border)',
+                    borderRadius:'var(--radius)', padding:'8px 12px', fontSize:13, overflowY:'auto',
+                    whiteSpace:'pre-wrap', wordBreak:'break-word', color:'var(--text)'}}>
+                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:6,letterSpacing:'0.08em'}}>PREVIEW</div>
+                    {message.split('
+').map((line, i) => {
+                      // Simple TG markdown: **bold**, _italic_, `code`, [text](url)
+                      const html = line
+                        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                        .replace(/__(.*?)__/g, '<b>$1</b>')
+                        .replace(/_(.*?)_/g, '<i>$1</i>')
+                        .replace(/`(.*?)`/g, '<code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+                        .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" style="color:var(--accent)">$1</a>');
+                      return <div key={i} dangerouslySetInnerHTML={{__html: html || ' '}} />;
+                    })}
+                  </div>
+                )}
+              </div>
+              <div style={{fontSize:11,marginTop:4,textAlign:'right',
+                color: message.length > 4096 ? 'var(--err)' : message.length > 3500 ? 'var(--warn,#f90)' : 'var(--muted)'}}>
+                {message.length}/4096{message.length > 4096 ? ' ⚠ too long' : ''} · {selected.length} chats
+              </div>
 
               {/* Attachment section */}
               <input
@@ -1752,6 +1803,14 @@ function BroadcastPage({ selected }) {
               )}
               <div style={{fontSize:12,color:'var(--muted)',marginBottom:20}}>
                 Delay: {delay}s{randomDelay ? ` + random 0–10s` : ''} · Max {maxPerMin}/min
+                {(() => {
+                  const avgDelay = delay + (randomDelay ? 5 : 0);
+                  const totalSec = selected.length * avgDelay;
+                  const mins = Math.ceil(totalSec / 60);
+                  return <span style={{color:'var(--accent)',marginLeft:8}}>
+                    ~ {mins < 60 ? `${mins} min` : `${Math.floor(mins/60)}h ${mins%60}m`}
+                  </span>;
+                })()}
               </div>
               <div style={{display:'flex',gap:10}}>
                 <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}} onClick={doStart}>
@@ -1799,6 +1858,8 @@ function HistoryPage({ appUser }) {
   const [selected, setSelected] = useState(null);
   useEffect(() => { api.get('/api/history').then(r => setHistory(r.history || [])); }, []);
   const isAdmin = appUser?.role === 'admin';
+  // Expose setTab globally for cross-component navigation (sticky bar in ChatsPage)
+  useEffect(() => { window.__setAppTab = setTab; return () => { delete window.__setAppTab; }; }, [setTab]);
 
   return (
     <div className="page">
@@ -1900,6 +1961,8 @@ function HistoryPage({ appUser }) {
 // ─── SettingsPage ─────────────────────────────────────────────────────────────
 function SettingsPage({ appUser, onLogout }) {
   const isAdmin = appUser?.role === 'admin';
+  // Expose setTab globally for cross-component navigation (sticky bar in ChatsPage)
+  useEffect(() => { window.__setAppTab = setTab; return () => { delete window.__setAppTab; }; }, [setTab]);
   const [section, setSection] = useState('password'); // 'password' | 'users' | 'backend' | 'tg'
 
   // ── Change My Password state ──
@@ -1994,6 +2057,9 @@ function SettingsPage({ appUser, onLogout }) {
     clearSessionToken();
     localStorage.removeItem('tgb_phone');
     localStorage.removeItem('tgb_tg_creds');
+    localStorage.removeItem('tgb_chat_meta');
+    localStorage.removeItem('tgb_global_tags');
+    localStorage.removeItem('tgb_tag_seq');
     setUserMsg('TG session cleared. Reload to re-login.');
   };
 
@@ -2321,13 +2387,18 @@ function App() {
         method: 'POST', headers: allHeaders({'Content-Type':'application/json'}), body: '{}'
       }); } catch {}
     }
-    clearSessionToken(); localStorage.removeItem('tgb_phone');
+    clearSessionToken();
+    localStorage.removeItem('tgb_phone');
+    localStorage.removeItem('tgb_tg_creds');
+    localStorage.removeItem('tgb_chat_meta');
     clearAppToken(); clearAppUserData();
     setTgUser(null); setAppUser(null); setSelected([]);
   };
 
   // Role helpers
   const isAdmin = appUser?.role === 'admin';
+  // Expose setTab globally for cross-component navigation (sticky bar in ChatsPage)
+  useEffect(() => { window.__setAppTab = setTab; return () => { delete window.__setAppTab; }; }, [setTab]);
 
 
 
