@@ -213,16 +213,16 @@ const F = React.Fragment;
 
 // ── API config ──────────────────────────────────────────────────────────────
 function getApiBase() {
-  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
+  return sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
 }
 let API_BASE = getApiBase();
-let JWT_TOKEN = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token') || '';
-let TG_SESSION = localStorage.getItem('tg_session') || sessionStorage.getItem('tg_session') || '';
-let SLACK_SESSION = localStorage.getItem('slack_session') || sessionStorage.getItem('slack_session') || '';
+let JWT_TOKEN = sessionStorage.getItem('jwt_token') || '';
+let TG_SESSION = sessionStorage.getItem('tg_session') || '';
+let SLACK_SESSION = sessionStorage.getItem('slack_session') || '';
 
-function setJwt(t) { JWT_TOKEN = t; if(t) { localStorage.setItem('jwt_token',t); sessionStorage.setItem('jwt_token',t); } else { localStorage.removeItem('jwt_token'); sessionStorage.removeItem('jwt_token'); } }
-function setTgSession(t) { TG_SESSION = t; if(t) { localStorage.setItem('tg_session',t); sessionStorage.setItem('tg_session',t); } else { localStorage.removeItem('tg_session'); sessionStorage.removeItem('tg_session'); } }
-function setSlackSession(t) { SLACK_SESSION = t; if(t) { localStorage.setItem('slack_session',t); sessionStorage.setItem('slack_session',t); } else { localStorage.removeItem('slack_session'); sessionStorage.removeItem('slack_session'); } }
+function setJwt(t) { JWT_TOKEN = t; if(t) sessionStorage.setItem('jwt_token',t); else sessionStorage.removeItem('jwt_token'); }
+function setTgSession(t) { TG_SESSION = t; if(t) sessionStorage.setItem('tg_session',t); else sessionStorage.removeItem('tg_session'); }
+function setSlackSession(t) { SLACK_SESSION = t; if(t) sessionStorage.setItem('slack_session',t); else sessionStorage.removeItem('slack_session'); }
 
 function apiHeaders() {
   const h = {'Content-Type':'application/json'};
@@ -236,8 +236,8 @@ const api = {
   get: (path) => fetch(API_BASE+path, {headers:apiHeaders()}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}).catch(()=>{throw new Error(r.status)}); return r.json();}),
   post: (path, body) => fetch(API_BASE+path, {method:'POST', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
   put: (path, body) => fetch(API_BASE+path, {method:'PUT', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
-  del: (path) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders()}).then(r => r.json()),
-  del_body: (path, body) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => r.json()),
+  del: (path) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders()}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
+  del_body: (path, body) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
 };
 
 // ── Settings Screen (backend URL) ───────────────────────────────────────────
@@ -251,7 +251,7 @@ function SettingsScreen({onSave}) {
     try { const r = await fetch(url.replace(/\/$/,'')+'/health'); if(r.ok) setOk(true); else setErr('Error: '+r.status); }
     catch(e) { setErr('Cannot connect'); } setTesting(false);
   };
-  const save = () => { const c=url.replace(/\/$/,''); localStorage.setItem('api_base',c); sessionStorage.setItem('api_base',c); API_BASE=c; onSave(); };
+  const save = () => { const c=url.replace(/\/$/,''); sessionStorage.setItem('api_base',c); API_BASE=c; onSave(); };
   return h('div',{className:'login-wrap'},
     h('div',{className:'login-hero'}, h('h1',null,'Broadcast Service'), h('p',null,'Enter your backend URL')),
     h('div',{className:'card'},
@@ -548,7 +548,7 @@ function CompanyUserManagement() {
       const body = {username: newUser, role: 'user'};
       if (newPwd) body.password = newPwd;
       const r = await api.post('/api/auth/users', body);
-      setMsg('User created! Password: ' + (r.generated_password || newPwd));
+      setMsg('User created! Password: ' + (r.password || newPwd));
       setNewUser(''); setNewPwd(''); setShowCreate(false); loadUsers();
     } catch(e) { setErr(e.message); }
   };
@@ -558,7 +558,7 @@ function CompanyUserManagement() {
       const r = await fetch(API_BASE+'/api/auth/users/'+uid+'/password', {
         method:'PUT', headers:apiHeaders(), body:JSON.stringify({})
       }).then(r=>r.json());
-      setResetInfo({uid, password: r.generated_password || 'Reset done'});
+      setResetInfo({uid, password: r.password || 'Reset done'});
     } catch(e) { setErr(e.message); }
   };
 
@@ -752,7 +752,7 @@ function SAUsersPage() {
       const r = await fetch(API_BASE+'/api/auth/users/'+uid+'/password', {
         method:'PUT', headers:apiHeaders(), body:JSON.stringify({})
       }).then(r=>r.json());
-      setResetInfo({uid, password: r.generated_password || 'Reset done'});
+      setResetInfo({uid, password: r.password || 'Reset done'});
     } catch(e) { setErr(e.message); }
   };
 
@@ -1011,12 +1011,13 @@ function UnifiedBroadcastPage({selected}) {
   };
 
   const startPoll = (bid) => {
+    if(pollRef.current) clearInterval(pollRef.current);
     setPolling(true);
     pollRef.current = setInterval(async () => {
       try {
         const s = await api.get('/api/unified/broadcast/status?broadcast_id='+bid);
         setStatus(s);
-        if(!s.running&&s.finished) { clearInterval(pollRef.current); setPolling(false); }
+        if(!s.running&&s.finished) { clearInterval(pollRef.current); pollRef.current=null; setPolling(false); }
       } catch(e){}
     }, 800);
   };
@@ -1443,7 +1444,7 @@ function App() {
   const [tab, setTab] = useState('broadcast');
   const [selected, setSelected] = useState([]);
   const [integrations, setIntegrations] = useState(null);
-  const [showSetup, setShowSetup] = useState(!localStorage.getItem('api_base') && !sessionStorage.getItem('api_base'));
+  const [showSetup, setShowSetup] = useState(!sessionStorage.getItem('api_base'));
   const [checking, setChecking] = useState(true);
 
   const loadIntegrations = useCallback(async () => {
@@ -1464,18 +1465,15 @@ function App() {
   useEffect(() => {
     if(showSetup) { setChecking(false); return; }
     if(!JWT_TOKEN) { setChecking(false); return; }
-    const timeout = setTimeout(() => setChecking(false), 5000); // 5s timeout fallback
     api.get('/api/auth/me').then(u => {
-      clearTimeout(timeout);
       const user = {username:u.username, role:u.role, id:u.id, company_id:u.company_id||null, company_name:u.company_name||null};
       setAppUser(user);
       if (u.role !== 'superadmin') loadIntegrations();
-    }).catch(() => { clearTimeout(timeout); setJwt(''); }).finally(() => setChecking(false));
-    return () => clearTimeout(timeout);
+    }).catch(() => { setJwt(''); }).finally(() => setChecking(false));
   }, [showSetup]);
 
   const handleSetup = () => { setShowSetup(false); setChecking(false); };
-  const handleLogin = (u) => { setChecking(false); setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
+  const handleLogin = (u) => { setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
   const handleLogout = () => { setJwt(''); setTgSession(''); setSlackSession(''); setAppUser(null); setSelected([]); setIntegrations(null); };
 
   if(showSetup) return h(SettingsScreen,{onSave:handleSetup});
@@ -1549,7 +1547,10 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+// Wait for DOM before mounting React
+(document.readyState === 'loading'
+  ? document.addEventListener('DOMContentLoaded', () => ReactDOM.createRoot(document.getElementById('root')).render(h(App)))
+  : ReactDOM.createRoot(document.getElementById('root')).render(h(App)));
 </script>
 </body>
 </html>
