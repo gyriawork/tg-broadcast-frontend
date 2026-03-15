@@ -1464,15 +1464,18 @@ function App() {
   useEffect(() => {
     if(showSetup) { setChecking(false); return; }
     if(!JWT_TOKEN) { setChecking(false); return; }
+    const timeout = setTimeout(() => setChecking(false), 5000); // 5s timeout fallback
     api.get('/api/auth/me').then(u => {
+      clearTimeout(timeout);
       const user = {username:u.username, role:u.role, id:u.id, company_id:u.company_id||null, company_name:u.company_name||null};
       setAppUser(user);
       if (u.role !== 'superadmin') loadIntegrations();
-    }).catch(() => { setJwt(''); }).finally(() => setChecking(false));
+    }).catch(() => { clearTimeout(timeout); setJwt(''); }).finally(() => setChecking(false));
+    return () => clearTimeout(timeout);
   }, [showSetup]);
 
   const handleSetup = () => { setShowSetup(false); setChecking(false); };
-  const handleLogin = (u) => { setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
+  const handleLogin = (u) => { setChecking(false); setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
   const handleLogout = () => { setJwt(''); setTgSession(''); setSlackSession(''); setAppUser(null); setSelected([]); setIntegrations(null); };
 
   if(showSetup) return h(SettingsScreen,{onSave:handleSetup});
