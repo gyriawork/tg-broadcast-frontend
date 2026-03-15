@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Broadcast Service</title>
+<title>Telegram Broadcast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
@@ -20,12 +20,11 @@
     --text: #c8dde8;
     --muted: #4a6070;
     --radius: 6px;
-    --slack: #e01e5a;
-    --tg: #2aabee;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
   #root { min-height: 100vh; display: flex; flex-direction: column; }
+
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -33,10 +32,11 @@
   .header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 16px 28px; border-bottom: 1px solid var(--border);
-    background: var(--surface); position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
   }
   .header-logo { display: flex; align-items: center; gap: 10px; }
-  .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
   .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.5px; }
   .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
   .header-user { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
@@ -54,7 +54,10 @@
   .main { flex: 1; display: flex; gap: 0; overflow: hidden; }
   .page { flex: 1; padding: 28px; overflow-y: auto; }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+  }
   .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--accent); margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase; }
 
   label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; margin-top: 14px; }
@@ -97,23 +100,50 @@
   input:checked + .toggle-slider { background: var(--accent2); }
   input:checked + .toggle-slider:before { transform: translateX(18px); background: var(--accent); }
 
-  .chat-list { max-height: 420px; overflow-y: auto; }
+  .chat-list { max-height: 460px; overflow-y: auto; }
   .chat-item {
-    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px;
     border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px;
-    cursor: pointer; transition: all .15s;
+    cursor: pointer; transition: all .15s; position: relative;
   }
   .chat-item:hover { border-color: var(--accent2); background: var(--surface2); }
   .chat-item.selected { border-color: var(--accent); background: rgba(0,212,255,0.06); }
   .chat-avatar {
     width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: bold; flex-shrink: 0;
+    font-size: 14px; font-weight: bold; flex-shrink: 0; margin-top: 2px;
   }
+  .chat-avatar.group { background: rgba(0,212,255,0.15); color: var(--accent); }
+  .chat-avatar.channel { background: rgba(0,144,204,0.15); color: var(--accent2); }
   .chat-info { flex: 1; min-width: 0; }
   .chat-name { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .chat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .chat-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .chat-meta { font-size: 11px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .chat-tags-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .chat-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
   .chat-item.selected .chat-check { background: var(--accent); border-color: var(--accent); }
+  .chat-edit-btn { opacity: 0; transition: opacity .15s; position: absolute; right: 36px; top: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 2px 7px; font-size: 10px; cursor: pointer; }
+  .chat-item:hover .chat-edit-btn { opacity: 1; }
+
+  .tag-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; cursor: default; }
+  .tag-chip.removable { cursor: pointer; }
+  .tag-chip.removable:hover { opacity: 0.7; }
+  .owner-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1px 7px; }
+  .owner-chip svg { width: 9px; height: 9px; }
+
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 10px; font-size: 11px; border: 1px solid transparent; cursor: pointer; transition: all .15s; }
+  .filter-chip:hover { opacity: 0.8; }
+  .filter-chip.active { box-shadow: 0 0 0 1px var(--accent); }
+  .filter-chip-owner { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .filter-chip-owner.active { border-color: var(--accent); color: var(--accent); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; width: 360px; max-height: 80vh; overflow-y: auto; }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+  .modal-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .tag-palette { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag-dot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .tag-dot.active { border-color: var(--text); }
 
   .progress-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 12px 0; }
   .progress-fill { height: 100%; background: var(--accent); transition: width .3s; }
@@ -132,7 +162,7 @@
   }
   .log-line { padding: 1px 0; }
 
-  .login-wrap { max-width: 440px; margin: 60px auto; }
+  .login-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
   .login-hero { text-align: center; margin-bottom: 32px; }
   .login-hero h1 { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: var(--accent); }
   .login-hero p { color: var(--muted); margin-top: 8px; font-size: 12px; }
@@ -149,9 +179,6 @@
   .badge-blue { background: rgba(0,212,255,0.15); color: var(--accent); }
   .badge-green { background: rgba(0,255,136,0.12); color: var(--green); }
   .badge-red { background: rgba(255,68,102,0.12); color: var(--red); }
-  .badge-tg { background: rgba(42,171,238,0.12); color: var(--tg); }
-  .badge-slack { background: rgba(224,30,90,0.12); color: var(--slack); }
-  .badge-mixed { background: rgba(255,204,0,0.12); color: var(--yellow); }
 
   table { width: 100%; border-collapse: collapse; }
   th { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -160,41 +187,66 @@
 
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .row-gap { display: flex; gap: 10px; align-items: flex-end; margin-top: 14px; }
+  .mt { margin-top: 12px; }
   .sep { height: 1px; background: var(--border); margin: 16px 0; }
   .selected-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .search-row { margin-bottom: 10px; }
   .current-tag { font-size: 11px; color: var(--accent); padding: 3px 8px; border: 1px solid var(--accent2); border-radius: 4px; }
-  .filter-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-  .filter-btn { padding: 4px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; font-size: 11px; transition: all .2s; }
-  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
-  .integration-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
-  .int-active { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); color: var(--green); }
-  .int-inactive { background: rgba(74,96,112,0.15); border: 1px solid var(--border); color: var(--muted); }
-  .settings-tab { padding: 8px 16px; border-radius: var(--radius) var(--radius) 0 0; cursor: pointer; border: 1px solid var(--border); border-bottom: none; background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; transition: all .2s; }
-  .settings-tab.active { background: var(--surface); color: var(--accent); }
-
-  .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .dash-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
-  .dash-card-val { font-size: 28px; font-family: 'Syne', sans-serif; font-weight: 800; color: var(--accent); }
-  .dash-card-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-  .bar-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .bar-name { width: 140px; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
-  .bar-fill-bg { flex: 1; height: 20px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s; min-width: 2px; }
-  .bar-count { width: 50px; text-align: right; font-size: 12px; color: var(--muted); flex-shrink: 0; }
-  .acc-checkbox { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-  .bulk-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--accent2); border-radius: var(--radius); margin-bottom: 12px; }
-  .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid var(--accent2); }
-  .tag-chip-rm { cursor: pointer; font-size: 12px; opacity: 0.6; }
-  .tag-chip-rm:hover { opacity: 1; }
-  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 500; display: flex; align-items: center; justify-content: center; }
-  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; min-width: 360px; max-width: 480px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
 
-  body::before {
+  .attach-bar {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px;
+  }
+  .attach-preview {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  .attach-preview img {
+    max-height: 72px; max-width: 120px; border-radius: 4px;
+    border: 1px solid var(--border); object-fit: cover;
+  }
+  .attach-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .attach-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .attach-size { font-size: 11px; color: var(--muted); }
+  .attach-icon { font-size: 28px; line-height: 1; }
+
+  
+.slider-wrap { margin-top: 4px; }
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider-val { min-width: 52px; text-align: right; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; color: var(--accent); }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 2px;
+  background: var(--border); outline: none; cursor: pointer;
+  border: none; padding: 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  transition: transform .15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.risk-box {
+  margin-top: 12px; padding: 10px 14px;
+  border-radius: var(--radius); font-size: 12px;
+  display: flex; align-items: flex-start; gap: 8px;
+  transition: all .3s;
+}
+.risk-safe { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
+.risk-warn { background: rgba(255,204,0,0.08); border: 1px solid rgba(255,204,0,0.35); color: var(--yellow); }
+.risk-danger { background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.4); color: var(--red); }
+.risk-icon { font-size: 16px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+.risk-text { line-height: 1.5; }
+.risk-title { font-weight: 700; letter-spacing: 0.3px; }
+.risk-detail { font-size: 11px; margin-top: 2px; opacity: 0.85; }
+.slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
+
+body::before {
     content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.01) 2px, rgba(0,212,255,0.01) 4px);
     pointer-events: none; z-index: 9999;
@@ -206,70 +258,109 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script>
+// Ensure Babel processes text/babel scripts after all CDN scripts load
+window.addEventListener('load', function() {
+  if (typeof Babel !== 'undefined' && document.getElementById('root') && !document.getElementById('root').children.length) {
+    try { Babel.transformScriptTags(); } catch(e) { console.error('Babel re-transform failed:', e); }
+  }
+});
+</script>
+<script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
-const h = React.createElement;
-const F = React.Fragment;
 
-// ── API config ──────────────────────────────────────────────────────────────
+const DEFAULT_API_BASE = 'https://web-production-b8b8b.up.railway.app';
 function getApiBase() {
-  return sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
+  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || DEFAULT_API_BASE;
 }
 let API_BASE = getApiBase();
-let JWT_TOKEN = sessionStorage.getItem('jwt_token') || '';
-let TG_SESSION = sessionStorage.getItem('tg_session') || '';
-let SLACK_SESSION = sessionStorage.getItem('slack_session') || '';
 
-function setJwt(t) { JWT_TOKEN = t; if(t) sessionStorage.setItem('jwt_token',t); else sessionStorage.removeItem('jwt_token'); }
-function setTgSession(t) { TG_SESSION = t; if(t) sessionStorage.setItem('tg_session',t); else sessionStorage.removeItem('tg_session'); }
-function setSlackSession(t) { SLACK_SESSION = t; if(t) sessionStorage.setItem('slack_session',t); else sessionStorage.removeItem('slack_session'); }
+// ─── App auth (JWT) ──────────────────────────────────────────────────────────
+function getAppToken() { return localStorage.getItem('app_token') || ''; }
+function setAppToken(t) { localStorage.setItem('app_token', t); }
+function clearAppToken() { localStorage.removeItem('app_token'); }
+function getAppUser() {
+  try { return JSON.parse(localStorage.getItem('app_user') || 'null'); } catch { return null; }
+}
+function setAppUserData(u) { localStorage.setItem('app_user', JSON.stringify(u)); }
+function clearAppUserData() { localStorage.removeItem('app_user'); }
 
-function apiHeaders() {
-  const h = {'Content-Type':'application/json'};
-  if (JWT_TOKEN) h['Authorization'] = 'Bearer ' + JWT_TOKEN;
-  if (TG_SESSION) h['X-Session-Token'] = TG_SESSION;
-  if (SLACK_SESSION) h['X-Slack-Session-Token'] = SLACK_SESSION;
+function getSessionToken() { return localStorage.getItem('tgb_session_token') || sessionStorage.getItem('session_token') || ''; }
+function setSessionToken(t) { localStorage.setItem('tgb_session_token', t); sessionStorage.setItem('session_token', t); }
+function clearSessionToken() { localStorage.removeItem('tgb_session_token'); localStorage.removeItem('tgb_tg_creds'); sessionStorage.removeItem('session_token'); }
+function getTgCreds() { try { return JSON.parse(localStorage.getItem('tgb_tg_creds') || 'null'); } catch { return null; } }
+function setTgCreds(apiId, apiHash) { localStorage.setItem('tgb_tg_creds', JSON.stringify({ apiId, apiHash })); }
+function sqt() { const t = getSessionToken(); return t ? '?session_token=' + encodeURIComponent(t) : '?'; }
+function allHeaders(extra = {}) {
+  const h = { ...extra };
+  const tg = getSessionToken();
+  const jwt = getAppToken();
+  if (tg) h['X-Session-Token'] = tg;
+  if (jwt) h['Authorization'] = 'Bearer ' + jwt;
   return h;
 }
-
 const api = {
-  get: (path) => fetch(API_BASE+path, {headers:apiHeaders()}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}).catch(()=>{throw new Error(r.status)}); return r.json();}),
-  post: (path, body) => fetch(API_BASE+path, {method:'POST', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
-  put: (path, body) => fetch(API_BASE+path, {method:'PUT', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
-  del: (path) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders()}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
-  del_body: (path, body) => fetch(API_BASE+path, {method:'DELETE', headers:apiHeaders(), body:JSON.stringify(body)}).then(r => {if(!r.ok) return r.json().then(e=>{throw new Error(e.detail||r.status)}); return r.json();}),
+  get:    (path) => fetch(API_BASE + path, { headers: allHeaders() }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  post:   (path, body) => fetch(API_BASE + path, { method:'POST', headers: allHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  upload: (path, fd) => fetch(API_BASE + path, { method:'POST', headers: allHeaders(), body: fd }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
+  del:    (path) => fetch(API_BASE + path, { method:'DELETE', headers: allHeaders() }).then(r => r.json()),
+  put:    (path, body) => fetch(API_BASE + path, { method:'PUT', headers: allHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) }).then(r => { if(!r.ok) return r.json().then(e => { throw new Error(e.detail || r.status); }); return r.json(); }),
 };
 
-// ── Settings Screen (backend URL) ───────────────────────────────────────────
-function SettingsScreen({onSave}) {
+// ─── SettingsScreen ──────────────────────────────────────────────────────────
+function SettingsScreen({ onSave }) {
   const [url, setUrl] = useState(API_BASE);
   const [testing, setTesting] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState(false);
+
   const test = async () => {
     setTesting(true); setErr(''); setOk(false);
-    try { const r = await fetch(url.replace(/\/$/,'')+'/health'); if(r.ok) setOk(true); else setErr('Error: '+r.status); }
-    catch(e) { setErr('Cannot connect'); } setTesting(false);
+    try {
+      const r = await fetch(url.replace(/\/$/, '') + '/health');
+      if (r.ok) setOk(true);
+      else setErr('Server error: ' + r.status);
+    } catch(e) { setErr('Cannot connect. Check the URL.'); }
+    setTesting(false);
   };
-  const save = () => { const c=url.replace(/\/$/,''); sessionStorage.setItem('api_base',c); API_BASE=c; onSave(); };
-  return h('div',{className:'login-wrap'},
-    h('div',{className:'login-hero'}, h('h1',null,'Broadcast Service'), h('p',null,'Enter your backend URL')),
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Backend URL'),
-      h('label',null,'URL'),
-      h('input',{type:'text',placeholder:'https://your-app.railway.app',value:url,onChange:e=>setUrl(e.target.value)}),
-      err && h('div',{className:'alert alert-err'},err),
-      ok && h('div',{className:'alert alert-ok'},'Server reachable!'),
-      h('div',{className:'row-gap'},
-        h('button',{className:'btn btn-secondary',onClick:test,disabled:testing}, testing?h(F,null,h('span',{className:'spinner'}),' Testing...'):'Test'),
-        h('button',{className:'btn btn-primary',onClick:save,disabled:!url},'Save')
-      )
-    )
+
+  const save = () => {
+    const clean = url.replace(/\/$/, '');
+    localStorage.setItem('api_base', clean); sessionStorage.setItem('api_base', clean);
+    API_BASE = clean;
+    onSave();
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-hero">
+        <h1>Telegram Broadcast</h1>
+        <p>Connect to your backend to get started</p>
+      </div>
+      <div className="card">
+        <div className="card-title">Backend Address</div>
+        <p style={{fontSize:'12px',color:'var(--muted)',marginBottom:12}}>
+          Copy the URL from Railway (Settings &gt; Domains) and paste it here.
+          Example: <span style={{color:'var(--accent)'}}>https://xxx.railway.app</span>
+        </p>
+        <label>Backend URL</label>
+        <input type="text" placeholder="https://your-app.railway.app" value={url} onChange={e=>setUrl(e.target.value)} />
+        {err && <div className="alert alert-err" style={{marginTop:8}}>{err}</div>}
+        {ok && <div className="alert alert-ok" style={{marginTop:8}}>Server is reachable!</div>}
+        <div className="row-gap" style={{marginTop:14}}>
+          <button className="btn btn-secondary" onClick={test} disabled={testing || !url}>
+            {testing ? <><span className="spinner"/> Checking...</> : 'Test'}
+          </button>
+          <button className="btn btn-primary" onClick={save} disabled={!url}>Save</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ── App Login Page ──────────────────────────────────────────────────────────
-function AppLoginPage({onAuth}) {
+// ─── AppLoginScreen ──────────────────────────────────────────────────────────
+function AppLoginScreen({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -278,1287 +369,2026 @@ function AppLoginPage({onAuth}) {
   const doLogin = async () => {
     setLoading(true); setErr('');
     try {
-      const r = await fetch(API_BASE+'/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password})});
-      if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Login failed'); }
+      const r = await fetch(API_BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Login failed'); }
       const data = await r.json();
-      setJwt(data.token);
-      onAuth({username:data.username, role:data.role, id:data.id, company_id:data.company_id||null, company_name:data.company_name||null});
+      setAppToken(data.token);
+      setAppUserData({ id: data.id, username: data.username, role: data.role });
+      onLogin({ id: data.id, username: data.username, role: data.role });
     } catch(e) { setErr(e.message); }
     setLoading(false);
   };
 
-  return h('div',{className:'login-wrap'},
-    h('div',{className:'login-hero'}, h('h1',null,'Broadcast Service'), h('p',null,'Multi-platform broadcast tool')),
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Login'),
-      h('label',null,'Username'),
-      h('input',{type:'text',value:username,onChange:e=>setUsername(e.target.value),placeholder:'admin'}),
-      h('label',null,'Password'),
-      h('input',{type:'password',value:password,onChange:e=>setPassword(e.target.value),onKeyDown:e=>{if(e.key==='Enter')doLogin()}}),
-      err && h('div',{className:'alert alert-err'},err),
-      h('div',{style:{marginTop:16}},
-        h('button',{className:'btn btn-primary',onClick:doLogin,disabled:loading||!username||!password},
-          loading ? h(F,null,h('span',{className:'spinner'}),' Logging in...') : 'Login')
-      )
-    )
+  return (
+    <div className="login-wrap">
+      <div className="login-hero">
+        <h1>Telegram Broadcast</h1>
+        <p>Evoplay User Client</p>
+      </div>
+      <div className="card">
+        <div className="card-title">Sign In</div>
+        <label>Username</label>
+        <input type="text" placeholder="admin" value={username}
+          onChange={e=>setUsername(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&doLogin()} />
+        <label>Password</label>
+        <input type="password" placeholder="••••••••" value={password}
+          onChange={e=>setPassword(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&doLogin()} />
+        {err && <div className="alert alert-err" style={{marginTop:8}}>{err}</div>}
+        <div style={{marginTop:16}}>
+          <button className="btn btn-primary" style={{width:'100%'}}
+            onClick={doLogin} disabled={loading || !username || !password}>
+            {loading ? <><span className="spinner"/> Signing in...</> : 'Sign In'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ── Settings Page (Integrations + Security + Users) ─────────────────────────
-function SettingsPage({integrations, onRefresh, appUser}) {
-  const [tab, setTab] = useState('integrations');
-  const isCompanyAdmin = appUser && appUser.role === 'company_admin';
+// ─── AdminPanel ──────────────────────────────────────────────────────────────
+function AdminPanel({ appUser, onClose }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newUsername, setNewUsername] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [creating, setCreating] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [newCreds, setNewCreds] = useState(null); // {username, password, role}
+  const [, forceUpdate] = useState(0);
 
-  const tabs = [
-    ['integrations', 'Integrations'],
-    ['security', 'Security']
-  ];
-  if (isCompanyAdmin) tabs.push(['users', 'Users']);
+  useEffect(() => { loadUsers(); }, []);
 
-  return h('div',{className:'page'},
-    h('div',{className:'card'},
-      h('div',{style:{display:'flex',gap:4,marginBottom:16}},
-        tabs.map(([k,l]) => h('button',{key:k,className:'settings-tab'+(tab===k?' active':''),onClick:()=>setTab(k)},l))
-      ),
-      tab==='integrations' && h(F, null,
-        h('div',{className:'card-title'},'Integrations'),
-        h(IntegrationsSubTabs, {integrations, onRefresh})
-      ),
-      tab==='security' && h(F, null,
-        h('div',{className:'card-title'},'Change Password'),
-        h(SecuritySettings, null)
-      ),
-      tab==='users' && isCompanyAdmin && h(CompanyUserManagement, null)
-    )
+  const loadUsers = async () => {
+    setLoading(true);
+    try { const r = await api.get('/api/auth/users'); setUsers(r.users); }
+    catch(e) { setErr('Failed to load users'); }
+    setLoading(false);
+  };
+
+  const createUser = async () => {
+    if (!newUsername.trim()) return;
+    setCreating(true); setErr(''); setMsg('');
+    try {
+      const r = await api.post('/api/auth/users', { username: newUsername.trim(), role: newRole });
+      setNewCreds({ username: r.username, password: r.password, role: r.role });
+      setNewUsername(''); setNewRole('user');
+      loadUsers();
+    } catch(e) { setErr(e.message); }
+    setCreating(false);
+  };
+
+  const deleteUser = async (uid, uname) => {
+    if (!window.confirm(`Delete user "${uname}"?`)) return;
+    try { await api.del('/api/auth/users/' + uid); loadUsers(); setMsg('User deleted'); }
+    catch(e) { setErr(e.message); }
+  };
+
+  const resetPassword = async (uid, uname) => {
+    if (!window.confirm(`Reset password for "${uname}"?`)) return;
+    try {
+      const r = await api.put('/api/auth/users/' + uid + '/password', {});
+      setNewCreds({ username: uname, password: r.password, role: '' });
+    } catch(e) { setErr(e.message); }
+  };
+
+  const roleBadge = (role) => (
+    <span style={{
+      display:'inline-block', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700,
+      background: role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+      color: role==='admin' ? 'var(--accent)' : 'var(--muted)',
+      border: `1px solid ${role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+    }}>{role}</span>
+  );
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:520,width:'100%'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div className="modal-title" style={{margin:0}}>User Management</div>
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+        </div>
+
+        {err && <div className="alert alert-err" style={{marginBottom:12}}>{err}</div>}
+        {msg && <div className="alert alert-ok" style={{marginBottom:12}}>{msg}</div>}
+
+        {/* New credentials display */}
+        {newCreds && (
+          <div style={{background:'var(--surface2)',border:'1px solid var(--accent)44',borderRadius:'var(--radius)',padding:14,marginBottom:16}}>
+            <div style={{fontSize:12,color:'var(--accent)',fontWeight:700,marginBottom:8}}>
+              {newCreds.role ? 'User created' : 'Password reset'} — save these credentials!
+            </div>
+            <div style={{fontFamily:'monospace',fontSize:13,marginBottom:4}}>
+              <span style={{color:'var(--muted)'}}>Username: </span>
+              <span style={{color:'var(--text)',fontWeight:700}}>{newCreds.username}</span>
+            </div>
+            <div style={{fontFamily:'monospace',fontSize:13,marginBottom:8}}>
+              <span style={{color:'var(--muted)'}}>Password: </span>
+              <span style={{color:'var(--accent)',fontWeight:700,letterSpacing:'0.05em'}}>{newCreds.password}</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={()=>{
+              navigator.clipboard.writeText(`Username: ${newCreds.username}\nPassword: ${newCreds.password}`);
+              setMsg('Copied!'); setTimeout(()=>setMsg(''),1500);
+            }}>Copy</button>
+            <button className="btn btn-secondary btn-sm" style={{marginLeft:8}} onClick={()=>setNewCreds(null)}>Dismiss</button>
+          </div>
+        )}
+
+        {/* Create user */}
+        <div className="card" style={{marginBottom:16,padding:14}}>
+          <div className="card-title" style={{marginBottom:12}}>Create New User</div>
+          <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+            <div style={{flex:1}}>
+              <label>Username</label>
+              <input type="text" placeholder="username" value={newUsername}
+                onChange={e=>setNewUsername(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&createUser()} />
+            </div>
+            <div>
+              <label>Role</label>
+              <select value={newRole} onChange={e=>setNewRole(e.target.value)}
+                style={{display:'block',background:'var(--surface2)',color:'var(--text)',
+                  border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'8px 12px',
+                  fontSize:13,cursor:'pointer'}}>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={createUser}
+              disabled={creating || !newUsername.trim()}>
+              {creating ? <span className="spinner"/> : '+ Create'}
+            </button>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
+            Password will be auto-generated and shown once.
+          </div>
+        </div>
+
+        {/* Users list */}
+        <div style={{maxHeight:340,overflowY:'auto'}}>
+          {loading ? (
+            <div style={{textAlign:'center',padding:20}}><span className="spinner"/></div>
+          ) : users.map(u => (
+            <div key={u.id} style={{
+              display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+              background:'var(--surface2)',borderRadius:'var(--radius)',
+              border:'1px solid var(--border)',marginBottom:6,
+            }}>
+              <div style={{flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontWeight:600,fontSize:13}}>{u.username}</span>
+                  {roleBadge(u.role)}
+                  {String(u.id) === String(appUser.id) && (
+                    <span style={{fontSize:10,color:'var(--accent)'}}>(you)</span>
+                  )}
+                </div>
+                <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>
+                  Created {u.created_at ? u.created_at.slice(0,10) : '—'}
+                </div>
+              </div>
+              {String(u.id) !== String(appUser.id) && (
+                <div style={{display:'flex',gap:6}}>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>resetPassword(u.id, u.username)}
+                    style={{fontSize:11,padding:'3px 8px'}}>
+                    Reset PW
+                  </button>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>deleteUser(u.id, u.username)}
+                    style={{fontSize:11,padding:'3px 8px',color:'var(--err)'}}>
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function IntegrationsSubTabs({integrations, onRefresh}) {
-  const [sub, setSub] = useState('telegram');
-  return h(F, null,
-    h('div',{style:{display:'flex',gap:4,marginBottom:16}},
-      h('button',{className:'settings-tab'+(sub==='telegram'?' active':''),onClick:()=>setSub('telegram')},'Telegram'),
-      h('button',{className:'settings-tab'+(sub==='slack'?' active':''),onClick:()=>setSub('slack')},'Slack')
-    ),
-    sub==='telegram' && h(TelegramSettings,{info:integrations?.telegram,onRefresh}),
-    sub==='slack' && h(SlackSettings,{info:integrations?.slack,onRefresh})
+// ─── ChangeMyPasswordModal ────────────────────────────────────────────────
+function ChangeMyPasswordModal({ onClose }) {
+  const [oldPw, setOldPw] = React.useState('');
+  const [newPw, setNewPw] = React.useState('');
+  const [newPw2, setNewPw2] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [ok, setOk] = React.useState(false);
+
+  const doChange = async () => {
+    if (newPw !== newPw2) { setErr('New passwords do not match'); return; }
+    if (newPw.length < 6) { setErr('New password must be at least 6 characters'); return; }
+    setLoading(true); setErr('');
+    try {
+      await api.put('/api/auth/me/password', { old_password: oldPw, new_password: newPw });
+      setOk(true);
+    } catch(e) { setErr(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+      <div className="card" style={{width:360,maxWidth:'95vw'}}>
+        <div className="card-title" style={{marginBottom:16}}>Change My Password</div>
+        {ok ? (
+          <div>
+            <div className="alert alert-ok">Password changed successfully!</div>
+            <button className="btn btn-primary" style={{marginTop:12,width:'100%'}} onClick={onClose}>Close</button>
+          </div>
+        ) : (
+          <div>
+            <label>Current Password</label>
+            <input type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} style={{marginBottom:10}} />
+            <label>New Password</label>
+            <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} style={{marginBottom:10}} />
+            <label>Confirm New Password</label>
+            <input type="password" value={newPw2} onChange={e=>setNewPw2(e.target.value)} style={{marginBottom:10}} />
+            {err && <div className="alert alert-err" style={{marginBottom:10}}>{err}</div>}
+            <div className="row-gap">
+              <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={doChange} disabled={loading||!oldPw||!newPw||!newPw2}>
+                {loading ? <><span className="spinner"/> Saving...</> : 'Change Password'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-function TelegramSettings({info, onRefresh}) {
+function LoginPage({ onAuth, appUser, onAppLogout }) {
+  const savedCreds = getTgCreds();
   const [step, setStep] = useState('config');
-  const [apiId, setApiId] = useState('');
-  const [apiHash, setApiHash] = useState('');
-  const [phone, setPhone] = useState('');
+  const [apiId, setApiId] = useState(savedCreds?.apiId || '');
+  const [apiHash, setApiHash] = useState(savedCreds?.apiHash || '');
+  const [phone, setPhone] = useState(localStorage.getItem('tgb_phone') || '');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
 
+  const qs = () => { const t = getSessionToken(); return t ? '?session_token=' + encodeURIComponent(t) : ''; };
+
   const doConnect = async () => {
     setLoading(true); setErr('');
     try {
-      const r = await api.post('/api/connect',{api_id:parseInt(apiId),api_hash:apiHash});
-      setTgSession(r.session_token);
-      if (r.authorized) { setMsg('Connected!'); onRefresh(); }
+      const r = await api.post('/api/connect', { api_id: parseInt(apiId), api_hash: apiHash });
+      if (r.session_token) setSessionToken(r.session_token);
+      setTgCreds(String(apiId), apiHash);
+      if (r.authorized) { const me = await api.get('/api/me' + qs()); onAuth(me); }
       else setStep('phone');
-    } catch(e) { setErr(e.message); } setLoading(false);
+    } catch(e) { setErr('Connection failed: ' + e.message); }
+    setLoading(false);
   };
+
   const doPhone = async () => {
     setLoading(true); setErr('');
-    try { await api.post('/api/send_code',{phone}); setStep('code'); setMsg('Code sent!'); }
-    catch(e) { setErr(e.message); } setLoading(false);
+    try {
+      await api.post('/api/send_code' + qs(), { phone });
+      localStorage.setItem('tgb_phone', phone);
+      setStep('code'); setMsg('Code sent to your Telegram!');
+    } catch(e) { setErr('Failed to send code'); }
+    setLoading(false);
   };
+
   const doCode = async () => {
     setLoading(true); setErr('');
     try {
-      await api.post('/api/verify_code',{code,password:password||null});
-      setMsg('Telegram connected!'); onRefresh();
+      const r = await api.post('/api/verify_code' + qs(), { code, password: password || null });
+      if (r.authorized) onAuth(r);
     } catch(e) {
-      if (e.message&&e.message.includes('2FA')) setStep('2fa');
-      else setErr(e.message);
-    } setLoading(false);
-  };
-  const doDisconnect = async () => {
-    try { await api.post('/api/logout',{}); } catch(e) {}
-    setTgSession(''); setStep('config'); setMsg(''); onRefresh();
+      if (e.message && e.message.includes('2FA')) setStep('2fa');
+      else setErr('Invalid code');
+    }
+    setLoading(false);
   };
 
-  if (info?.connected) {
-    return h(F,null,
-      h('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:16}},
-        h('span',{className:'integration-status int-active'},'Active'),
-        h('span',{style:{color:'var(--text)'}},info.name||info.phone||'Connected')
-      ),
-      h('button',{className:'btn btn-danger btn-sm',onClick:doDisconnect},'Disconnect')
-    );
+  return (
+    <div className="login-wrap">
+      <div className="login-hero">
+        <h1>Telegram Broadcast</h1>
+        <p>Reach all your groups in one go — powered by your own Telegram account</p>
+      </div>
+
+      {appUser && (
+        <div style={{
+          display:'flex',alignItems:'center',justifyContent:'space-between',
+          background:'var(--surface2)',border:'1px solid var(--border)',
+          borderRadius:'var(--radius)',padding:'10px 14px',marginBottom:16,
+        }}>
+          <div style={{fontSize:12,color:'var(--muted)'}}>
+            Signed in as{' '}
+            <span style={{color:'var(--accent)',fontWeight:700}}>{appUser.username}</span>
+            {' '}<span style={{
+              fontSize:10,padding:'1px 6px',borderRadius:8,
+              background: appUser.role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+              color: appUser.role==='admin' ? 'var(--accent)' : 'var(--muted)',
+              border:`1px solid ${appUser.role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+            }}>{appUser.role}</span>
+          </div>
+          <button className="btn btn-secondary btn-sm" style={{fontSize:11,padding:'2px 8px'}}
+            onClick={onAppLogout}>Switch account</button>
+        </div>
+      )}
+
+      {step === 'config' && (
+        <div className="card">
+          <div className="card-title">API Credentials</div>
+          <p style={{fontSize:12,color:'var(--muted)',marginBottom:12}}>
+            Get your credentials from <a href="https://my.telegram.org" target="_blank" style={{color:'var(--accent)'}}>my.telegram.org</a> &rarr; API development tools
+          </p>
+          <label>API ID</label>
+          <input type="text" placeholder="12345678" value={apiId} onChange={e=>setApiId(e.target.value)} />
+          <label>API Hash</label>
+          <input type="text" placeholder="abc123..." value={apiHash} onChange={e=>setApiHash(e.target.value)} />
+          {err && <div className="alert alert-err">{err}</div>}
+          <div style={{marginTop:16}}>
+            <button className="btn btn-primary" onClick={doConnect} disabled={loading || !apiId || !apiHash}>
+              {loading ? <><span className="spinner"/> Connecting...</> : 'Connect'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'phone' && (
+        <div className="card">
+          <div className="card-title">Phone Number</div>
+          <label>Phone (international format)</label>
+          <input type="tel" placeholder="+79001234567" value={phone} onChange={e=>setPhone(e.target.value)} />
+          {err && <div className="alert alert-err">{err}</div>}
+          <div className="row-gap">
+            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('config')}>Back</button>
+            <button className="btn btn-primary" onClick={doPhone} disabled={loading || !phone}>
+              {loading ? <><span className="spinner"/> Sending...</> : 'Send Code'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(step === 'code' || step === '2fa') && (
+        <div className="card">
+          <div className="card-title">{step === '2fa' ? '2FA Password' : 'Verification Code'}</div>
+          {msg && <div className="alert alert-info" style={{marginBottom:12}}>{msg}</div>}
+          {step === 'code' && (
+            <>
+              <label>Code from Telegram</label>
+              <input type="text" placeholder="12345" value={code} onChange={e=>setCode(e.target.value)} />
+            </>
+          )}
+          <label>2FA Password {step === 'code' ? '(if enabled)' : '(required)'}</label>
+          <input type="password" placeholder="password" value={password} onChange={e=>setPassword(e.target.value)} />
+          {err && <div className="alert alert-err">{err}</div>}
+          <div className="row-gap">
+            <button className="btn btn-secondary btn-sm" onClick={()=>setStep('phone')}>Back</button>
+            <button className="btn btn-primary" onClick={doCode} disabled={loading || !code}>
+              {loading ? <><span className="spinner"/> Verifying...</> : 'Verify'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tag colors palette ────────────────────────────────────────────────────
+const TAG_COLORS = [
+  '#00d4ff','#00ff88','#ff4466','#ffcc00','#a78bfa','#fb923c',
+  '#34d399','#f472b6','#60a5fa','#e879f9',
+];
+
+// ─── Chat meta storage (localStorage-backed) ───────────────────────────────
+const LS_META = 'tgb_chat_meta';
+const LS_TAGS = 'tgb_global_tags';
+const LS_SEQ  = 'tgb_tag_seq';
+
+function _loadLS(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+}
+function _saveLS(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+const chatMeta    = _loadLS(LS_META, {});
+const globalTags  = _loadLS(LS_TAGS, {});
+let _tagSeq = _loadLS(LS_SEQ, 1);
+
+function mkTagId() {
+  const id = 'tag_' + _tagSeq++;
+  _saveLS(LS_SEQ, _tagSeq);
+  return id;
+}
+function getChatMeta(id) {
+  if (!chatMeta[id]) chatMeta[id] = { tags: [], owner: '' };
+  return chatMeta[id];
+}
+function saveChatMeta(id, data) {
+  chatMeta[id] = data;
+  _saveLS(LS_META, chatMeta);
+}
+function saveGlobalTag(t) {
+  globalTags[t.id] = t;
+  _saveLS(LS_TAGS, globalTags);
+}
+function deleteGlobalTag(tId) {
+  delete globalTags[tId];
+  // remove from all chat metas
+  for (const id of Object.keys(chatMeta)) {
+    chatMeta[id].tags = (chatMeta[id].tags || []).filter(t => t.id !== tId);
   }
+  _saveLS(LS_TAGS, globalTags);
+  _saveLS(LS_META, chatMeta);
+}
+function getAllOwners() {
+  return [...new Set(Object.values(chatMeta).map(m => m.owner).filter(Boolean))].sort();
+}
 
-  return h(F,null,
-    h('div',{style:{marginBottom:12}}, h('span',{className:'integration-status int-inactive'},'Not connected')),
-    h('p',{style:{fontSize:12,color:'var(--muted)',marginBottom:12}},
-      'Get credentials from ', h('a',{href:'https://my.telegram.org',target:'_blank',style:{color:'var(--accent)'}},'my.telegram.org')),
-    step==='config' && h(F,null,
-      h('label',null,'API ID'), h('input',{type:'text',value:apiId,onChange:e=>setApiId(e.target.value)}),
-      h('label',null,'API Hash'), h('input',{type:'text',value:apiHash,onChange:e=>setApiHash(e.target.value)}),
-      err && h('div',{className:'alert alert-err'},err),
-      h('div',{style:{marginTop:14}}, h('button',{className:'btn btn-primary',onClick:doConnect,disabled:loading||!apiId||!apiHash},
-        loading?h(F,null,h('span',{className:'spinner'}),' Connecting...'):'Connect'))
-    ),
-    step==='phone' && h(F,null,
-      h('label',null,'Phone'), h('input',{type:'tel',placeholder:'+79001234567',value:phone,onChange:e=>setPhone(e.target.value)}),
-      err && h('div',{className:'alert alert-err'},err),
-      h('div',{className:'row-gap'}, h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setStep('config')},'Back'),
-        h('button',{className:'btn btn-primary',onClick:doPhone,disabled:loading||!phone}, loading?'Sending...':'Send Code'))
-    ),
-    (step==='code'||step==='2fa') && h(F,null,
-      msg && h('div',{className:'alert alert-info',style:{marginBottom:12}},msg),
-      step==='code' && h(F,null, h('label',null,'Code'), h('input',{type:'text',value:code,onChange:e=>setCode(e.target.value)})),
-      h('label',null,'2FA Password'+(step==='code'?' (if enabled)':'')),
-      h('input',{type:'password',value:password,onChange:e=>setPassword(e.target.value)}),
-      err && h('div',{className:'alert alert-err'},err),
-      h('div',{className:'row-gap'}, h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setStep('phone')},'Back'),
-        h('button',{className:'btn btn-primary',onClick:doCode,disabled:loading||!code}, loading?'Verifying...':'Verify'))
-    )
+// ─── EditChatModal ─────────────────────────────────────────────────────────
+function EditChatModal({ chat, onClose, onSave }) {
+  const meta = getChatMeta(chat.id);
+  const [tags, setTags] = useState([...meta.tags]);
+  const [owner, setOwner] = useState(meta.owner || '');
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+  const [ownerOpen, setOwnerOpen] = useState(false);
+
+  const allGlobalTags = Object.values(globalTags);
+  const knownOwners = getAllOwners();
+  const hasTag = (tId) => tags.some(t => t.id === tId);
+
+  const addExistingTag = (t) => {
+    if (!hasTag(t.id)) setTags(prev => [...prev, t]);
+  };
+  const removeTag = (tId) => setTags(prev => prev.filter(t => t.id !== tId));
+
+  const createTag = () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    // check duplicate name
+    const existing = allGlobalTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) { addExistingTag(existing); setNewTagName(''); return; }
+    const id = mkTagId();
+    const t = { id, name, color: newTagColor };
+    saveGlobalTag(t);
+    setTags(prev => [...prev, t]);
+    setNewTagName('');
+    setNewTagColor(TAG_COLORS[_tagSeq % TAG_COLORS.length]);
+  };
+
+  const handleSave = () => {
+    saveChatMeta(chat.id, { tags, owner: owner.trim() });
+    onSave();
+    onClose();
+  };
+
+  const ownerSuggestions = knownOwners.filter(o =>
+    o.toLowerCase().includes(owner.toLowerCase()) && o !== owner
+  );
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-title">Edit Chat</div>
+        <div style={{fontSize:13,color:'var(--text)',marginBottom:16,fontWeight:500}}>{chat.name}</div>
+
+        <span className="modal-label">Owner</span>
+        <div style={{position:'relative',marginBottom:16}}>
+          <input
+            type="text" placeholder="e.g. Anton" value={owner}
+            onChange={e=>{setOwner(e.target.value);setOwnerOpen(true);}}
+            onFocus={()=>setOwnerOpen(true)}
+            onBlur={()=>setTimeout(()=>setOwnerOpen(false),150)}
+          />
+          {ownerOpen && ownerSuggestions.length > 0 && (
+            <div style={{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,zIndex:999,maxHeight:140,overflowY:'auto'}}>
+              {ownerSuggestions.map(o => (
+                <div key={o} onMouseDown={()=>{setOwner(o);setOwnerOpen(false);}}
+                  style={{padding:'7px 12px',cursor:'pointer',fontSize:13,color:'var(--text)'}}
+                  onMouseEnter={e=>e.target.style.background='var(--hover)'}
+                  onMouseLeave={e=>e.target.style.background='transparent'}>
+                  {o}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <span className="modal-label">Tags on this chat</span>
+        <div className="tag-palette" style={{marginBottom:8}}>
+          {tags.length === 0 && <span style={{fontSize:11,color:'var(--muted)'}}>No tags yet</span>}
+          {tags.map(t => (
+            <span key={t.id} className="tag-chip removable"
+              style={{background: t.color+'22', color: t.color, border:`1px solid ${t.color}55`}}
+              onClick={() => removeTag(t.id)}
+              title="Click to remove">
+              {t.name} &times;
+            </span>
+          ))}
+        </div>
+
+        {allGlobalTags.filter(t => !hasTag(t.id)).length > 0 && (
+          <>
+            <span className="modal-label">Add existing tag</span>
+            <div className="tag-palette" style={{marginBottom:12}}>
+              {allGlobalTags.filter(t => !hasTag(t.id)).map(t => (
+                <span key={t.id} className="tag-chip removable"
+                  style={{background: t.color+'22', color: t.color, border:`1px solid ${t.color}55`}}
+                  onClick={() => addExistingTag(t)}>
+                  + {t.name}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
+        <span className="modal-label">Create new tag</span>
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+          <input type="text" placeholder="Tag name" value={newTagName}
+            onChange={e=>setNewTagName(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&createTag()}
+            style={{flex:1}} />
+          <button className="btn btn-secondary btn-sm" onClick={createTag} disabled={!newTagName.trim()}>+ Add</button>
+        </div>
+        <div style={{display:'flex',gap:6,marginBottom:4}}>
+          {TAG_COLORS.map(c => (
+            <div key={c} className={`tag-dot ${newTagColor===c?'active':''}`}
+              style={{background:c}} onClick={()=>setNewTagColor(c)}/>
+          ))}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function SlackSettings({info, onRefresh}) {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-  const [botToken, setBotToken] = useState('');
-  const [showManual, setShowManual] = useState(false);
+// ─── BulkAssignPanel ────────────────────────────────────────────────────────
+function BulkAssignPanel({ selectedIds, onApplied }) {
+  const [owner, setOwner] = useState('');
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]); // [{id,name,color}]
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+  const [mode, setMode] = useState('add'); // 'add' | 'replace'
+  const [done, setDone] = useState('');
+  const [, forceUpdate] = useState(0);
 
-  const doOAuth = async () => {
-    setLoading(true); setErr('');
-    try {
-      const r = await api.get('/api/slack/oauth/start');
-      window.location.href = r.url;
-    } catch(e) {
-      setErr(e.message);
-      setShowManual(true);
-    } setLoading(false);
+  const allGlobalTags = Object.values(globalTags);
+  const knownOwners = getAllOwners();
+  const hasTag = (tId) => selectedTags.some(t => t.id === tId);
+
+  const toggleTag = (t) => {
+    setSelectedTags(prev => prev.some(x => x.id === t.id)
+      ? prev.filter(x => x.id !== t.id)
+      : [...prev, t]);
   };
 
-  const doManualConnect = async () => {
-    setLoading(true); setErr('');
-    try {
-      const r = await api.post('/api/slack/connect',{bot_token:botToken});
-      setSlackSession(r.slack_session_token);
-      onRefresh();
-    } catch(e) { setErr(e.message); } setLoading(false);
+  const createAndAddTag = () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    const existing = allGlobalTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) { if (!hasTag(existing.id)) setSelectedTags(prev => [...prev, existing]); setNewTagName(''); return; }
+    const id = mkTagId();
+    const t = { id, name, color: newTagColor };
+    saveGlobalTag(t);
+    setSelectedTags(prev => [...prev, t]);
+    setNewTagName('');
+    setNewTagColor(TAG_COLORS[_tagSeq % TAG_COLORS.length]);
+    forceUpdate(n => n+1);
   };
 
-  const doDisconnect = async () => {
-    try { await api.post('/api/slack/disconnect',{}); } catch(e) {}
-    setSlackSession(''); onRefresh();
+  const apply = () => {
+    if (!owner.trim() && selectedTags.length === 0) return;
+    let count = 0;
+    for (const id of selectedIds) {
+      const meta = getChatMeta(id);
+      const newMeta = { ...meta };
+      if (owner.trim()) newMeta.owner = owner.trim();
+      if (selectedTags.length > 0) {
+        if (mode === 'replace') {
+          newMeta.tags = [...selectedTags];
+        } else {
+          // merge — add tags not already present
+          const existing = new Set(meta.tags.map(t => t.id));
+          newMeta.tags = [...meta.tags, ...selectedTags.filter(t => !existing.has(t.id))];
+        }
+      }
+      saveChatMeta(id, newMeta);
+      count++;
+    }
+    setDone(`Applied to ${count} chats`);
+    setTimeout(() => setDone(''), 2500);
+    onApplied && onApplied();
   };
 
-  if (info?.connected) {
-    return h(F,null,
-      h('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:16}},
-        h('span',{className:'integration-status int-active'},'Active'),
-        h('span',{style:{color:'var(--text)'}},info.team||'Connected')
-      ),
-      h('button',{className:'btn btn-danger btn-sm',onClick:doDisconnect},'Disconnect')
-    );
-  }
+  const ownerSuggestions = knownOwners.filter(o =>
+    o.toLowerCase().includes(owner.toLowerCase()) && o !== owner
+  );
 
-  return h(F,null,
-    h('div',{style:{marginBottom:12}}, h('span',{className:'integration-status int-inactive'},'Not connected')),
-    h('p',{style:{fontSize:12,color:'var(--muted)',marginBottom:12}},
-      'Connect your Slack workspace via OAuth or enter a Bot Token manually.'),
-    h('button',{className:'btn btn-primary',onClick:doOAuth,disabled:loading,style:{background:'var(--slack)'}},
-      loading?h(F,null,h('span',{className:'spinner'}),' Redirecting...'):'Add to Slack'),
-    err && h('div',{className:'alert alert-err'},err),
-    (showManual || !err) && h(F,null,
-      h('div',{className:'sep'}),
-      h('p',{style:{fontSize:11,color:'var(--muted)',marginBottom:8}},'Or connect manually with Bot Token:'),
-      h('label',null,'Bot Token'),
-      h('input',{type:'text',placeholder:'xoxb-...',value:botToken,onChange:e=>setBotToken(e.target.value)}),
-      h('div',{style:{marginTop:10}},
-        h('button',{className:'btn btn-secondary btn-sm',onClick:doManualConnect,disabled:loading||!botToken},'Connect with Token'))
-    )
+  const canApply = owner.trim() || selectedTags.length > 0;
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <label style={{marginBottom:0}}>
+          Bulk assign to <span style={{color:'var(--accent)',fontWeight:700}}>{selectedIds.length}</span> selected chats
+        </label>
+      </div>
+
+      {/* Owner */}
+      <div style={{marginBottom:12}}>
+        <span className="modal-label">Owner</span>
+        <div style={{position:'relative'}}>
+          <input type="text" placeholder="Set owner (leave blank to skip)"
+            value={owner}
+            onChange={e=>{setOwner(e.target.value);setOwnerOpen(true);}}
+            onFocus={()=>setOwnerOpen(true)}
+            onBlur={()=>setTimeout(()=>setOwnerOpen(false),150)}
+          />
+          {ownerOpen && ownerSuggestions.length > 0 && (
+            <div style={{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,zIndex:999,maxHeight:120,overflowY:'auto'}}>
+              {ownerSuggestions.map(o => (
+                <div key={o} onMouseDown={()=>{setOwner(o);setOwnerOpen(false);}}
+                  style={{padding:'7px 12px',cursor:'pointer',fontSize:13,color:'var(--text)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  {o}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div style={{marginBottom:8}}>
+        <span className="modal-label">Tags</span>
+
+        {/* existing global tags as toggles */}
+        {allGlobalTags.length > 0 && (
+          <div className="tag-palette" style={{marginBottom:8}}>
+            {allGlobalTags.map(t => (
+              <span key={t.id}
+                className="tag-chip removable"
+                style={{
+                  background: hasTag(t.id) ? t.color+'44' : t.color+'18',
+                  color: t.color,
+                  border: `1px solid ${hasTag(t.id) ? t.color : t.color+'44'}`,
+                  opacity: hasTag(t.id) ? 1 : 0.6,
+                  fontWeight: hasTag(t.id) ? 700 : 400,
+                }}
+                onClick={() => toggleTag(t)}>
+                {hasTag(t.id) ? '✓ ' : '+ '}{t.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* create new tag inline */}
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+          <input type="text" placeholder="New tag name" value={newTagName}
+            onChange={e=>setNewTagName(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&createAndAddTag()}
+            style={{flex:1}} />
+          <button className="btn btn-secondary btn-sm" onClick={createAndAddTag} disabled={!newTagName.trim()}>+ Add</button>
+        </div>
+        <div style={{display:'flex',gap:6,marginBottom:8}}>
+          {TAG_COLORS.map(c => (
+            <div key={c} className={`tag-dot ${newTagColor===c?'active':''}`}
+              style={{background:c}} onClick={()=>setNewTagColor(c)}/>
+          ))}
+        </div>
+
+        {/* merge mode */}
+        {selectedTags.length > 0 && (
+          <div style={{display:'flex',gap:8,marginBottom:6}}>
+            {['add','replace'].map(m => (
+              <label key={m} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,cursor:'pointer',color: mode===m ? 'var(--accent)' : 'var(--muted)'}}>
+                <input type="radio" checked={mode===m} onChange={()=>setMode(m)} style={{accentColor:'var(--accent)'}} />
+                {m === 'add' ? 'Add to existing tags' : 'Replace all tags'}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <button className="btn btn-primary btn-sm" onClick={apply} disabled={!canApply}>
+          Apply to {selectedIds.length} chats
+        </button>
+        {done && <span style={{fontSize:12,color:'var(--ok)'}}>{done}</span>}
+      </div>
+    </div>
   );
 }
 
-// ── Security Settings (Change Password) ─────────────────────────────────────
-function SecuritySettings() {
-  const [curPwd, setCurPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-  const [ok, setOk] = useState('');
+// ─── TagManagerPanel ────────────────────────────────────────────────────────
+function TagManagerPanel({ onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [, forceUpdate] = useState(0);
+  const tags = Object.values(globalTags);
 
-  const doChange = async () => {
-    setErr(''); setOk('');
-    if (newPwd !== confirmPwd) { setErr('Passwords do not match'); return; }
-    if (newPwd.length < 4) { setErr('Password too short (min 4 chars)'); return; }
-    setLoading(true);
-    try {
-      await api.post('/api/auth/me/password', {current_password: curPwd, new_password: newPwd});
-      setOk('Password changed! Please re-login.');
-      setCurPwd(''); setNewPwd(''); setConfirmPwd('');
-      setTimeout(() => { setJwt(''); window.location.reload(); }, 2000);
-    } catch(e) { setErr(e.message); }
-    setLoading(false);
+  const doDelete = (tId) => {
+    if (!window.confirm('Delete this tag from all chats?')) return;
+    deleteGlobalTag(tId);
+    forceUpdate(n => n+1);
+    onChanged && onChanged();
   };
 
-  return h(F, null,
-    h('label', null, 'Current Password'),
-    h('input', {type:'password', value:curPwd, onChange:e=>setCurPwd(e.target.value)}),
-    h('label', null, 'New Password'),
-    h('input', {type:'password', value:newPwd, onChange:e=>setNewPwd(e.target.value)}),
-    h('label', null, 'Confirm New Password'),
-    h('input', {type:'password', value:confirmPwd, onChange:e=>setConfirmPwd(e.target.value)}),
-    err && h('div', {className:'alert alert-err'}, err),
-    ok && h('div', {className:'alert alert-ok'}, ok),
-    h('div', {style:{marginTop:14}},
-      h('button', {className:'btn btn-primary', onClick:doChange, disabled:loading||!curPwd||!newPwd||!confirmPwd},
-        loading ? h(F,null,h('span',{className:'spinner'}),' Changing...') : 'Change Password'))
+  if (tags.length === 0 && !open) return null;
+
+  return (
+    <div className="card" style={{marginBottom:0}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer'}}
+        onClick={()=>setOpen(o=>!o)}>
+        <div className="card-title" style={{marginBottom:0}}>
+          Manage Tags
+          <span style={{marginLeft:8,fontSize:11,color:'var(--muted)',fontWeight:400}}>{tags.length} tag{tags.length!==1?'s':''}</span>
+        </div>
+        <span style={{color:'var(--muted)',fontSize:12}}>{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div style={{marginTop:12}}>
+          {tags.length === 0 && <div style={{fontSize:12,color:'var(--muted)'}}>No tags created yet. Use "Edit" on any chat to create tags.</div>}
+          <div className="tag-palette">
+            {tags.map(t => (
+              <span key={t.id} style={{display:'inline-flex',alignItems:'center',gap:5,
+                background:t.color+'22',color:t.color,border:`1px solid ${t.color}55`,
+                borderRadius:10,padding:'3px 10px',fontSize:12,fontWeight:500}}>
+                {t.name}
+                <span onClick={()=>doDelete(t.id)}
+                  style={{cursor:'pointer',opacity:0.6,fontSize:13,lineHeight:1,marginLeft:2}}
+                  title="Delete tag">&times;</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-// ── Company User Management (for company_admin) ────────────────────────────
-function CompanyUserManagement() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newUser, setNewUser] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [err, setErr] = useState('');
-  const [msg, setMsg] = useState('');
-  const [resetInfo, setResetInfo] = useState(null);
-
-  useEffect(() => { loadUsers(); }, []);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    try { const r = await api.get('/api/auth/users'); setUsers(r.users||[]); }
-    catch(e) { setErr(e.message); }
-    setLoading(false);
-  };
-
-  const doCreate = async () => {
-    setErr(''); setMsg('');
-    if (!newUser) return;
-    try {
-      const body = {username: newUser, role: 'user'};
-      if (newPwd) body.password = newPwd;
-      const r = await api.post('/api/auth/users', body);
-      setMsg('User created! Password: ' + (r.password || newPwd));
-      setNewUser(''); setNewPwd(''); setShowCreate(false); loadUsers();
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doResetPwd = async (uid) => {
-    try {
-      const r = await fetch(API_BASE+'/api/auth/users/'+uid+'/password', {
-        method:'PUT', headers:apiHeaders(), body:JSON.stringify({})
-      }).then(r=>r.json());
-      setResetInfo({uid, password: r.password || 'Reset done'});
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doToggleActive = async (uid, current) => {
-    try {
-      await fetch(API_BASE+'/api/auth/users/'+uid+'/active', {
-        method:'PUT', headers:apiHeaders(), body:JSON.stringify({is_active: current ? 0 : 1})
-      });
-      loadUsers();
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doDelete = async (uid) => {
-    if (!confirm('Delete this user?')) return;
-    try { await api.del('/api/auth/users/'+uid); loadUsers(); }
-    catch(e) { setErr(e.message); }
-  };
-
-  return h('div', null,
-    h('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-      h('div', {className:'card-title', style:{marginBottom:0}}, 'Company Users'),
-      h('button', {className:'btn btn-primary btn-sm', onClick:()=>setShowCreate(!showCreate)}, showCreate ? 'Cancel' : '+ Create User')
-    ),
-    err && h('div', {className:'alert alert-err', style:{marginBottom:12}}, err),
-    msg && h('div', {className:'alert alert-ok', style:{marginBottom:12}}, msg),
-    resetInfo && h('div', {className:'alert alert-info', style:{marginBottom:12}},
-      'Password for user #'+resetInfo.uid+': ', h('strong',null,resetInfo.password),
-      h('button',{className:'btn btn-sm',style:{marginLeft:10,background:'transparent',border:'none',color:'var(--accent)'},onClick:()=>setResetInfo(null)},'Dismiss')),
-    showCreate && h('div', {style:{marginBottom:16,padding:16,background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}},
-      h('label', null, 'Username'), h('input', {type:'text', value:newUser, onChange:e=>setNewUser(e.target.value)}),
-      h('label', null, 'Password (leave empty to auto-generate)'), h('input', {type:'password', value:newPwd, onChange:e=>setNewPwd(e.target.value)}),
-      h('div', {style:{marginTop:10}}, h('button', {className:'btn btn-primary btn-sm', onClick:doCreate, disabled:!newUser}, 'Create'))
-    ),
-    loading ? h('div',{style:{textAlign:'center',padding:20}},h('span',{className:'spinner'})) :
-    h('table', null,
-      h('thead', null, h('tr', null,
-        h('th', null, 'Username'), h('th', null, 'Role'), h('th', null, 'Status'), h('th', null, 'Actions'))),
-      h('tbody', null,
-        users.map(u => h('tr', {key:u.id},
-          h('td', null, u.username),
-          h('td', null, h('span', {className:'badge '+(u.role==='company_admin'?'badge-blue':'badge-green')}, u.role)),
-          h('td', null, h('span', {className:'badge '+(u.is_active!==0?'badge-green':'badge-red')}, u.is_active!==0?'Active':'Inactive')),
-          h('td', null,
-            u.role !== 'company_admin' && h(F, null,
-              h('button', {className:'btn btn-secondary btn-sm', style:{marginRight:4}, onClick:()=>doResetPwd(u.id)}, 'Reset Pwd'),
-              h('button', {className:'btn btn-secondary btn-sm', style:{marginRight:4}, onClick:()=>doToggleActive(u.id, u.is_active!==0)}, u.is_active!==0?'Deactivate':'Activate'),
-              h('button', {className:'btn btn-danger btn-sm', onClick:()=>doDelete(u.id)}, 'Delete')
-            )
-          )
-        ))
-      )
-    )
-  );
-}
-
-// ── Super Admin: Companies Page ─────────────────────────────────────────────
-function SACompaniesPage() {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({name:'', slug:'', email:'', admin_username:'', admin_password:''});
-  const [err, setErr] = useState('');
-  const [msg, setMsg] = useState('');
-  const [detail, setDetail] = useState(null);
-
-  useEffect(() => { loadCompanies(); }, []);
-
-  const loadCompanies = async () => {
-    setLoading(true);
-    try { const r = await api.get('/api/admin/companies'); setCompanies(r.companies||[]); }
-    catch(e) { setErr(e.message); }
-    setLoading(false);
-  };
-
-  const doCreate = async () => {
-    setErr(''); setMsg('');
-    if (!form.name || !form.slug || !form.admin_username) { setErr('Name, slug, and admin username are required'); return; }
-    try {
-      const r = await api.post('/api/admin/companies', form);
-      setMsg('Company created! Admin password: ' + (r.admin_password || form.admin_password));
-      setForm({name:'', slug:'', email:'', admin_username:'', admin_password:''});
-      setShowCreate(false); loadCompanies();
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doToggleStatus = async (c) => {
-    try {
-      await fetch(API_BASE+'/api/admin/companies/'+c.id, {
-        method:'PUT', headers:apiHeaders(),
-        body:JSON.stringify({status: c.status==='active'?'inactive':'active'})
-      });
-      loadCompanies();
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doDelete = async (id) => {
-    if (!confirm('Delete this company and ALL its data?')) return;
-    try { await api.del('/api/admin/companies/'+id); loadCompanies(); setDetail(null); }
-    catch(e) { setErr(e.message); }
-  };
-
-  const loadDetail = async (id) => {
-    try { const r = await api.get('/api/admin/companies/'+id); setDetail(r); }
-    catch(e) { setErr(e.message); }
-  };
-
-  return h('div', {className:'page'},
-    h('div', {className:'card'},
-      h('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-        h('div', {className:'card-title', style:{marginBottom:0}}, 'Companies'),
-        h('button', {className:'btn btn-primary btn-sm', onClick:()=>setShowCreate(!showCreate)}, showCreate ? 'Cancel' : '+ Create Company')
-      ),
-      err && h('div', {className:'alert alert-err', style:{marginBottom:12}}, err),
-      msg && h('div', {className:'alert alert-ok', style:{marginBottom:12}}, msg,
-        h('button',{className:'btn btn-sm',style:{marginLeft:10,background:'transparent',border:'none',color:'var(--green)'},onClick:()=>setMsg('')},'Dismiss')),
-      showCreate && h('div', {style:{marginBottom:16,padding:16,background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}},
-        h('div', {className:'two-col'},
-          h('div', null, h('label', null, 'Company Name'), h('input', {type:'text', value:form.name, onChange:e=>setForm({...form,name:e.target.value})})),
-          h('div', null, h('label', null, 'Slug (unique ID)'), h('input', {type:'text', value:form.slug, onChange:e=>setForm({...form,slug:e.target.value})}))
-        ),
-        h('label', null, 'Email (optional)'), h('input', {type:'text', value:form.email, onChange:e=>setForm({...form,email:e.target.value})}),
-        h('div', {className:'two-col'},
-          h('div', null, h('label', null, 'Admin Username'), h('input', {type:'text', value:form.admin_username, onChange:e=>setForm({...form,admin_username:e.target.value})})),
-          h('div', null, h('label', null, 'Admin Password (auto if empty)'), h('input', {type:'password', value:form.admin_password, onChange:e=>setForm({...form,admin_password:e.target.value})}))
-        ),
-        h('div', {style:{marginTop:14}}, h('button', {className:'btn btn-primary', onClick:doCreate}, 'Create Company'))
-      ),
-      loading ? h('div',{style:{textAlign:'center',padding:20}},h('span',{className:'spinner'})) :
-      companies.length === 0 ? h('p', {style:{color:'var(--muted)',fontSize:12}}, 'No companies yet') :
-      h('table', null,
-        h('thead', null, h('tr', null,
-          h('th',null,'Name'), h('th',null,'Slug'), h('th',null,'Admin'), h('th',null,'Users'), h('th',null,'Status'), h('th',null,'Created'), h('th',null,'Actions'))),
-        h('tbody', null,
-          companies.map(c => h('tr', {key:c.id},
-            h('td', {style:{cursor:'pointer',color:'var(--accent)'},onClick:()=>loadDetail(c.id)}, c.name),
-            h('td', null, h('span', {className:'current-tag'}, c.slug)),
-            h('td', null, c.admin_username || '-'),
-            h('td', null, c.user_count || 0),
-            h('td', null, h('span', {className:'badge '+(c.status==='active'?'badge-green':'badge-red')}, c.status)),
-            h('td', {style:{fontSize:11,color:'var(--muted)'}}, (c.created_at||'').slice(0,10)),
-            h('td', null,
-              h('button', {className:'btn btn-secondary btn-sm', style:{marginRight:4}, onClick:()=>doToggleStatus(c)}, c.status==='active'?'Deactivate':'Activate'),
-              h('button', {className:'btn btn-danger btn-sm', onClick:()=>doDelete(c.id)}, 'Delete'))
-          ))
-        )
-      )
-    ),
-    detail && h('div', {className:'card'},
-      h('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
-        h('div', {className:'card-title', style:{marginBottom:0}}, detail.company?.name + ' - Users'),
-        h('button', {className:'btn btn-secondary btn-sm', onClick:()=>setDetail(null)}, 'Close')
-      ),
-      h('div',{className:'sep'}),
-      (detail.users||[]).length === 0 ? h('p', {style:{color:'var(--muted)',fontSize:12}}, 'No users') :
-      h('table', null,
-        h('thead', null, h('tr', null, h('th',null,'Username'), h('th',null,'Role'), h('th',null,'Status'))),
-        h('tbody', null,
-          (detail.users||[]).map(u => h('tr', {key:u.id},
-            h('td', null, u.username),
-            h('td', null, h('span', {className:'badge '+(u.role==='company_admin'?'badge-blue':'badge-green')}, u.role)),
-            h('td', null, h('span', {className:'badge '+(u.is_active!==0?'badge-green':'badge-red')}, u.is_active!==0?'Active':'Inactive'))
-          ))
-        )
-      )
-    )
-  );
-}
-
-// ── Super Admin: All Users Page ─────────────────────────────────────────────
-function SAUsersPage() {
-  const [users, setUsers] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filterCompany, setFilterCompany] = useState('');
-  const [err, setErr] = useState('');
-  const [resetInfo, setResetInfo] = useState(null);
-
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [ur, cr] = await Promise.all([api.get('/api/auth/users'), api.get('/api/admin/companies')]);
-      setUsers(ur.users||[]); setCompanies(cr.companies||[]);
-    } catch(e) { setErr(e.message); }
-    setLoading(false);
-  };
-
-  const doResetPwd = async (uid) => {
-    try {
-      const r = await fetch(API_BASE+'/api/auth/users/'+uid+'/password', {
-        method:'PUT', headers:apiHeaders(), body:JSON.stringify({})
-      }).then(r=>r.json());
-      setResetInfo({uid, password: r.password || 'Reset done'});
-    } catch(e) { setErr(e.message); }
-  };
-
-  const doToggleActive = async (uid, current) => {
-    try {
-      await fetch(API_BASE+'/api/auth/users/'+uid+'/active', {
-        method:'PUT', headers:apiHeaders(), body:JSON.stringify({is_active: current ? 0 : 1})
-      });
-      loadData();
-    } catch(e) { setErr(e.message); }
-  };
-
-  const filtered = filterCompany ? users.filter(u => String(u.company_id) === filterCompany) : users;
-
-  return h('div', {className:'page'},
-    h('div', {className:'card'},
-      h('div', {className:'card-title'}, 'All Users'),
-      err && h('div', {className:'alert alert-err', style:{marginBottom:12}}, err),
-      resetInfo && h('div', {className:'alert alert-info', style:{marginBottom:12}},
-        'New password for user #'+resetInfo.uid+': ', h('strong',null,resetInfo.password),
-        h('button',{className:'btn btn-sm',style:{marginLeft:10,background:'transparent',border:'none',color:'var(--accent)'},onClick:()=>setResetInfo(null)},'Dismiss')),
-      h('div', {style:{marginBottom:12}},
-        h('label', null, 'Filter by Company'),
-        h('select', {style:{width:'100%',padding:'8px 12px',background:'var(--bg)',border:'1px solid var(--border)',color:'var(--text)',borderRadius:'var(--radius)',fontFamily:'inherit',fontSize:13},
-          value:filterCompany, onChange:e=>setFilterCompany(e.target.value)},
-          h('option', {value:''}, 'All Companies'),
-          companies.map(c => h('option', {key:c.id, value:String(c.id)}, c.name))
-        )
-      ),
-      loading ? h('div',{style:{textAlign:'center',padding:20}},h('span',{className:'spinner'})) :
-      h('table', null,
-        h('thead', null, h('tr', null,
-          h('th',null,'Username'), h('th',null,'Role'), h('th',null,'Company'), h('th',null,'Status'), h('th',null,'Actions'))),
-        h('tbody', null,
-          filtered.map(u => h('tr', {key:u.id},
-            h('td', null, u.username),
-            h('td', null, h('span', {className:'badge '+(u.role==='superadmin'?'badge-red':u.role==='company_admin'?'badge-blue':'badge-green')}, u.role)),
-            h('td', null, u.company_name || '-'),
-            h('td', null, h('span', {className:'badge '+(u.is_active!==0?'badge-green':'badge-red')}, u.is_active!==0?'Active':'Inactive')),
-            h('td', null,
-              u.role !== 'superadmin' && h(F, null,
-                h('button', {className:'btn btn-secondary btn-sm', style:{marginRight:4}, onClick:()=>doResetPwd(u.id)}, 'Reset Pwd'),
-                h('button', {className:'btn btn-secondary btn-sm', onClick:()=>doToggleActive(u.id, u.is_active!==0)}, u.is_active!==0?'Deactivate':'Activate')
-              )
-            )
-          ))
-        )
-      )
-    )
-  );
-}
-
-// ── Super Admin: System Page ────────────────────────────────────────────────
-function SASystemPage() {
-  const [health, setHealth] = useState(null);
-  const [sessions, setSessions] = useState(null);
-  const [backupMsg, setBackupMsg] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch(API_BASE+'/health').then(r=>r.json()).then(setHealth).catch(()=>{});
-    api.get('/api/admin/sessions').then(setSessions).catch(()=>{});
-  }, []);
-
-  const doBackup = async () => {
-    setLoading(true); setBackupMsg('');
-    try {
-      const r = await api.post('/api/admin/backup', {});
-      setBackupMsg('Backup created: ' + (r.path || 'OK'));
-    } catch(e) { setBackupMsg('Error: ' + e.message); }
-    setLoading(false);
-  };
-
-  return h('div', {className:'page'},
-    h('div', {className:'card'},
-      h('div', {className:'card-title'}, 'System Health'),
-      health ? h('div', {className:'stats-row'},
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-green'}, health.status || 'OK'), h('div', {className:'stat-key'}, 'Status')),
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-blue'}, health.tg_sessions || 0), h('div', {className:'stat-key'}, 'TG Sessions')),
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-blue'}, health.slack_sessions || 0), h('div', {className:'stat-key'}, 'Slack Sessions')),
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-blue'}, health.active_broadcasts || 0), h('div', {className:'stat-key'}, 'Broadcasts'))
-      ) : h('span', {className:'spinner'})
-    ),
-    h('div', {className:'card'},
-      h('div', {className:'card-title'}, 'Backup'),
-      h('button', {className:'btn btn-primary btn-sm', onClick:doBackup, disabled:loading},
-        loading ? h(F,null,h('span',{className:'spinner'}),' Creating...') : 'Create Backup'),
-      backupMsg && h('div', {className:'alert '+(backupMsg.startsWith('Error')?'alert-err':'alert-ok'), style:{marginTop:10}}, backupMsg)
-    ),
-    sessions && h('div', {className:'card'},
-      h('div', {className:'card-title'}, 'Active Sessions'),
-      h('div', {className:'stats-row'},
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-blue'}, sessions.telegram_sessions || 0), h('div', {className:'stat-key'}, 'Telegram')),
-        h('div', {className:'stat'}, h('div', {className:'stat-val val-blue'}, sessions.slack_sessions || 0), h('div', {className:'stat-key'}, 'Slack'))
-      )
-    )
-  );
-}
-
-// ── Unified Chats Page ──────────────────────────────────────────────────────
-function UnifiedChatsPage({selected, setSelected}) {
+// ─── ChatsPage ─────────────────────────────────────────────────────────────
+function ChatsPage({ selected, setSelected, appUser }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [lists, setLists] = useState([]);
   const [saveListName, setSaveListName] = useState('');
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
+  const [editChat, setEditChat] = useState(null);
+  const [, forceUpdate] = useState(0);
 
-  useEffect(() => { loadLists(); }, []);
+  // filter state
+  const [filterTags, setFilterTags] = useState([]); // tag ids
+  const [filterOwner, setFilterOwner] = useState(''); // owner string
+
+  // admin: session picker
+  const isAdmin = appUser?.role === 'admin';
+  const [sessions, setSessions] = useState([]);
+  const [pickedSession, setPickedSession] = useState('');
+
+  useEffect(() => {
+    loadLists();
+    if (isAdmin) loadSessions();
+  }, []);
+
+  const loadSessions = async () => {
+    try {
+      const r = await api.get('/api/admin/sessions');
+      setSessions(r.sessions || []);
+    } catch {}
+  };
 
   const loadChats = async () => {
     setLoading(true); setErr('');
-    try { const r = await api.get('/api/unified/chats'); setChats(r.chats); }
-    catch(e) { setErr('Failed to load chats: '+e.message); }
+    try {
+      const tok = pickedSession || getSessionToken();
+      const r = await api.get('/api/chats?session_token=' + encodeURIComponent(tok));
+      setChats(r.chats);
+    }
+    catch(e) { setErr('Failed to load chats: ' + e.message); }
     setLoading(false);
   };
 
   const loadLists = async () => {
-    try { const r = await api.get('/api/unified/lists'); setLists(r.lists||[]); } catch(e) {}
+    const r = await api.get('/api/lists' + sqt());
+    setLists(r.lists || []);
   };
 
-  const toggle = (id) => setSelected(prev => prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const toggle = (id) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
+  };
+
+  // Build list of all owners used so far
+  const allOwners = [...new Set([...getAllOwners(), ...chats.map(c => getChatMeta(c.id).owner).filter(Boolean)])].sort();
+  const allTagsInUse = Object.values(globalTags);
+
+  const toggleFilterTag = (tId) => {
+    setFilterTags(prev => prev.includes(tId) ? prev.filter(x=>x!==tId) : [...prev, tId]);
+  };
+  const toggleFilterOwner = (o) => {
+    setFilterOwner(prev => prev === o ? '' : o);
+  };
+
+  const CHATS_PER_PAGE = 100;
+  const [visibleCount, setVisibleCount] = useState(CHATS_PER_PAGE);
 
   const filtered = chats.filter(c => {
+    const meta = getChatMeta(c.id);
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (platformFilter!=='all' && c.platform!==platformFilter) return false;
-    if (typeFilter!=='all' && c.type!==typeFilter) return false;
+    if (filterOwner && meta.owner !== filterOwner) return false;
+    if (filterTags.length > 0 && !filterTags.every(tId => meta.tags.some(t => t.id === tId))) return false;
     return true;
   });
 
-  const selectAll = () => setSelected(prev => [...new Set([...prev, ...filtered.map(c=>c.id)])]);
+  // Reset pagination when filter changes
+  useEffect(() => { setVisibleCount(CHATS_PER_PAGE); }, [search, filterOwner, filterTags.length]);
+
+  const visibleChats = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > visibleCount;
+
+  const selectAll = () => setSelected(filtered.map(c=>c.id));
   const clearAll = () => setSelected([]);
 
   const doSaveList = async () => {
-    if (!saveListName||!selected.length) return;
-    await api.post('/api/unified/lists',{name:saveListName,chat_ids:selected});
+    if (!saveListName || !selected.length) return;
+    await api.post('/api/lists' + sqt(), { name: saveListName, chat_ids: selected });
     setSaveListName(''); setMsg('List saved!'); loadLists();
-    setTimeout(()=>setMsg(''),2500);
+    setTimeout(() => setMsg(''), 2500);
   };
 
-  const loadSavedList = (lst) => setSelected(lst.chats);
-  const deleteList = async (id) => { await api.del('/api/unified/lists/'+id); loadLists(); };
-
-  const tgCount = selected.filter(id=>id.startsWith('tg:')).length;
-  const slackCount = selected.filter(id=>id.startsWith('slack:')).length;
-
-  const avatarStyle = (c) => {
-    if (c.platform==='telegram') return {background:'rgba(42,171,238,0.15)',color:'var(--tg)'};
-    return {background:'rgba(224,30,90,0.15)',color:'var(--slack)'};
+  const deleteList = async (id) => {
+    await api.del('/api/lists/' + id + sqt().replace('?','&')); loadLists();
   };
-  const avatarChar = (c) => c.platform==='slack'?'#':c.name.charAt(0).toUpperCase();
 
-  return h('div',{className:'main'},
-    h('div',{className:'page'},
-      h('div',{className:'card'},
-        h('div',{className:'card-title'},'Load Chats'),
-        h('div',{style:{display:'flex',gap:10}},
-          h('button',{className:'btn btn-primary',onClick:loadChats,disabled:loading},
-            loading?h(F,null,h('span',{className:'spinner'}),' Loading...'):'Load All Chats'),
-          chats.length>0 && h('span',{style:{color:'var(--muted)',alignSelf:'center',fontSize:12}},chats.length+' chats')
-        ),
-        err && h('div',{className:'alert alert-err',style:{marginTop:10}},err)
-      ),
-      chats.length>0 && h('div',{className:'card'},
-        h('div',{className:'selected-bar'},
-          h('div',{className:'card-title',style:{marginBottom:0}},
-            'Chats ',
-            h('span',{className:'badge badge-blue',style:{marginLeft:8}},selected.length+' selected'),
-            tgCount>0 && h('span',{className:'badge badge-tg',style:{marginLeft:4}},tgCount+' TG'),
-            slackCount>0 && h('span',{className:'badge badge-slack',style:{marginLeft:4}},slackCount+' Slack')
-          ),
-          h('div',{style:{display:'flex',gap:8}},
-            h('button',{className:'btn btn-secondary btn-sm',onClick:selectAll},'Select All'),
-            h('button',{className:'btn btn-secondary btn-sm',onClick:clearAll},'Clear'))
-        ),
-        h('div',{className:'filter-row'},
-          ['all','telegram','slack'].map(f=>
-            h('button',{key:f,className:'filter-btn'+(platformFilter===f?' active':''),onClick:()=>setPlatformFilter(f)},
-              f==='all'?'All':f==='telegram'?'Telegram':'Slack')),
-          h('span',{style:{color:'var(--border)',margin:'0 4px'}},'|'),
-          ['all','channel','group','dm'].map(f=>
-            h('button',{key:f,className:'filter-btn'+(typeFilter===f?' active':''),onClick:()=>setTypeFilter(f)},
-              f==='all'?'All Types':f.charAt(0).toUpperCase()+f.slice(1)))
-        ),
-        h('div',{className:'search-row'},
-          h('input',{type:'text',placeholder:'Search chats...',value:search,onChange:e=>setSearch(e.target.value)})),
-        h('div',{className:'chat-list'},
-          filtered.map(c=>
-            h('div',{key:c.id,className:'chat-item'+(selected.includes(c.id)?' selected':''),onClick:()=>toggle(c.id)},
-              h('div',{className:'chat-avatar',style:avatarStyle(c)},avatarChar(c)),
-              h('div',{className:'chat-info'},
-                h('div',{className:'chat-name'},c.name),
-                h('div',{className:'chat-meta'},
-                  h('span',{className:'badge badge-'+(c.platform==='telegram'?'tg':'slack')},c.platform==='telegram'?'TG':'Slack'),
-                  h('span',{className:'badge badge-blue',style:{marginLeft:4}},c.type),
-                  c.members>0 && h('span',{style:{marginLeft:6}},c.members+' members')
-                )
-              ),
-              h('div',{className:'chat-check'},
-                selected.includes(c.id) && h('span',{style:{color:'var(--bg)',fontSize:12}},'\u2713'))
-            )
-          )
-        ),
-        selected.length>0 && h('div',{style:{marginTop:14}},
-          h('div',{className:'sep'}),
-          h('label',null,'Save selection as list'),
-          h('div',{className:'row-gap'},
-            h('input',{type:'text',placeholder:'List name',value:saveListName,onChange:e=>setSaveListName(e.target.value),style:{flex:1}}),
-            h('button',{className:'btn btn-secondary btn-sm',onClick:doSaveList,disabled:!saveListName},'Save')),
-          msg && h('div',{className:'alert alert-ok',style:{marginTop:8}},msg)
-        )
-      )
-    ),
-    h('div',{className:'sidebar'},
-      h('div',{className:'sidebar-title'},'Saved Lists'),
-      lists.length===0 && h('p',{style:{color:'var(--muted)',fontSize:12}},'No saved lists yet'),
-      lists.map(lst=>
-        h('div',{key:lst.id,style:{marginBottom:10,padding:10,background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}},
-          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
-            h('span',{style:{fontSize:13}},lst.name),
-            h('button',{className:'btn btn-secondary btn-sm',style:{padding:'3px 8px',fontSize:10},onClick:()=>deleteList(lst.id)},'\u2715')),
-          h('div',{style:{fontSize:11,color:'var(--muted)',marginTop:4}},
-            lst.chats.length+' chats',
-            lst.channel_type && h('span',{className:'badge badge-'+(lst.channel_type==='mixed'?'mixed':lst.channel_type==='telegram'?'tg':'slack'),style:{marginLeft:6}},lst.channel_type)),
-          h('button',{className:'btn btn-secondary btn-sm',style:{marginTop:8,width:'100%'},onClick:()=>loadSavedList(lst)},'Load')
-        )
-      )
-    )
+  const hasFilters = filterTags.length > 0 || filterOwner;
+
+  return (
+    <div className="main">
+      <div className="page">
+        <div className="card">
+          <div className="card-title">Load Chats</div>
+          {isAdmin && sessions.length > 0 && (
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:'var(--muted)',marginBottom:4,display:'block'}}>Load chats from session:</label>
+              <select value={pickedSession} onChange={e=>setPickedSession(e.target.value)}
+                style={{background:'var(--surface2)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:6,padding:'6px 10px',width:'100%',fontSize:13}}>
+                <option value="">— My session —</option>
+                {sessions.map(s => (
+                  <option key={s.token} value={s.token}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <button className="btn btn-primary" onClick={loadChats} disabled={loading}>
+              {loading ? <><span className="spinner"/> Loading...</> : 'Load Chats'}
+            </button>
+            {isAdmin && <button className="btn btn-secondary btn-sm" onClick={loadSessions} title="Refresh sessions list">↻</button>}
+            {chats.length > 0 && <span style={{color:'var(--muted)',alignSelf:'center',fontSize:12}}>{chats.length} chats found</span>}
+          </div>
+          {err && <div className="alert alert-err" style={{marginTop:10}}>{err}</div>}
+        </div>
+
+        <TagManagerPanel onChanged={() => forceUpdate(n => n+1)} />
+
+        {chats.length > 0 && (
+          <div className="card">
+            <div className="selected-bar">
+              <div className="card-title" style={{marginBottom:0}}>
+                Select Chats <span className="badge badge-blue" style={{marginLeft:8}}>{selected.length} selected</span>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn btn-secondary btn-sm" onClick={selectAll}>Select All</button>
+                <button className="btn btn-secondary btn-sm" onClick={clearAll}>Clear</button>
+              </div>
+            </div>
+
+            {/* Filter bar */}
+            {(allTagsInUse.length > 0 || allOwners.length > 0) && (
+              <div style={{marginBottom:10}}>
+                {allTagsInUse.length > 0 && (
+                  <div className="filter-bar" style={{marginBottom:6}}>
+                    <span style={{fontSize:10,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase'}}>Tags:</span>
+                    {allTagsInUse.map(t => (
+                      <span key={t.id}
+                        className={`filter-chip ${filterTags.includes(t.id)?'active':''}`}
+                        style={{background:t.color+'22',color:t.color,border:`1px solid ${filterTags.includes(t.id)?t.color:t.color+'44'}`}}
+                        onClick={()=>toggleFilterTag(t.id)}>
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {allOwners.length > 0 && (
+                  <div className="filter-bar">
+                    <span style={{fontSize:10,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase'}}>Owner:</span>
+                    {allOwners.map(o => (
+                      <span key={o}
+                        className={`filter-chip filter-chip-owner ${filterOwner===o?'active':''}`}
+                        onClick={()=>toggleFilterOwner(o)}>
+                        {o}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {hasFilters && (
+                  <div className="filter-bar">
+                    <span className="filter-chip" style={{color:'var(--muted)',border:'1px solid var(--border)'}}
+                      onClick={()=>{setFilterTags([]);setFilterOwner('');}}>
+                      x Clear filters
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="search-row">
+              <input type="text" placeholder="Search chats..." value={search} onChange={e=>setSearch(e.target.value)} />
+            </div>
+
+            <div style={{fontSize:11,color:'var(--muted)',marginBottom:6}}>
+              {filtered.length} of {chats.length} chats
+              {hasFilters && <span style={{color:'var(--accent)',marginLeft:6}}>(filtered)</span>}
+            </div>
+
+            <div className="chat-list">
+              {visibleChats.map(c => {
+                const meta = getChatMeta(c.id);
+                return (
+                  <div key={c.id} className={`chat-item ${selected.includes(c.id)?'selected':''}`}
+                    onClick={()=>toggle(c.id)}>
+                    <div className={`chat-avatar ${c.type}`}>{c.name.charAt(0).toUpperCase()}</div>
+                    <div className="chat-info">
+                      <div className="chat-name">{c.name}</div>
+                      <div className="chat-meta">
+                        <span className={`badge badge-${c.type==='channel'?'blue':'green'}`}>{c.type}</span>
+                        {c.members && <span>{c.members.toLocaleString()} members</span>}
+                        {meta.owner && (
+                          <span className="owner-chip">
+                            <svg viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="4" r="2.5"/><path d="M1 10c0-2.2 2.2-4 5-4s5 1.8 5 4"/></svg>
+                            {meta.owner}
+                          </span>
+                        )}
+                      </div>
+                      {meta.tags.length > 0 && (
+                        <div className="chat-tags-row">
+                          {meta.tags.map(t => (
+                            <span key={t.id} className="tag-chip"
+                              style={{background:t.color+'22',color:t.color,border:`1px solid ${t.color}44`}}>
+                              {t.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button className="chat-edit-btn" onClick={e=>{e.stopPropagation();setEditChat(c);}}>
+                      Edit
+                    </button>
+                    <div className="chat-check">
+                      {selected.includes(c.id) && <span style={{color:'var(--bg)',fontSize:12}}>v</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {filtered.length === 0 && (
+                <div style={{textAlign:'center',padding:'24px 0',color:'var(--muted)',fontSize:12}}>
+                  No chats match filters
+                </div>
+              )}
+              {hasMore && (
+                <div style={{textAlign:'center',padding:'12px 0'}}>
+                  <button className="btn-secondary" onClick={() => setVisibleCount(v => v + CHATS_PER_PAGE)}
+                    style={{fontSize:12,padding:'6px 20px'}}>
+                    Show more ({filtered.length - visibleCount} remaining)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {selected.length > 0 && (
+              <div style={{marginTop:14}}>
+                <div className="sep"/>
+                <BulkAssignPanel
+                  selectedIds={selected}
+                  onApplied={() => forceUpdate(n => n+1)}
+                />
+                <div className="sep" style={{marginTop:12}}/>
+                <label>Save selection as list</label>
+                <div className="row-gap">
+                  <input type="text" placeholder="List name" value={saveListName} onChange={e=>setSaveListName(e.target.value)} style={{flex:1}} />
+                  <button className="btn btn-secondary btn-sm" onClick={doSaveList} disabled={!saveListName}>Save</button>
+                </div>
+                {msg && <div className="alert alert-ok" style={{marginTop:8}}>{msg}</div>}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="sidebar">
+        <div className="sidebar-title">Saved Lists</div>
+        {lists.length === 0 && <p style={{color:'var(--muted)',fontSize:12}}>No saved lists yet</p>}
+        {lists.map(lst => (
+          <div key={lst.id} style={{marginBottom:10,padding:'10px',background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span style={{fontSize:13}}>{lst.name}</span>
+              <button className="btn btn-secondary btn-sm" style={{padding:'3px 8px',fontSize:10}} onClick={()=>deleteList(lst.id)}>x</button>
+            </div>
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{lst.chats.length} chats</div>
+            <button className="btn btn-secondary btn-sm" style={{marginTop:8,width:'100%'}} onClick={()=>setSelected(lst.chats)}>Load</button>
+          </div>
+        ))}
+      </div>
+
+      {editChat && (
+        <EditChatModal
+          chat={editChat}
+          onClose={() => setEditChat(null)}
+          onSave={() => forceUpdate(n => n+1)}
+        />
+      )}
+    </div>
   );
 }
 
-// ── Unified Broadcast Page ──────────────────────────────────────────────────
-function UnifiedBroadcastPage({selected}) {
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function AttachmentPreview({ file, onRemove }) {
+  const isImage = file.type.startsWith('image/');
+  const [imgUrl, setImgUrl] = React.useState(null);
+
+  useEffect(() => {
+    if (isImage) {
+      const url = URL.createObjectURL(file);
+      setImgUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file]);
+
+  const fileIcon = () => {
+    if (isImage) return null;
+    if (file.type === 'application/pdf') return '';
+    if (file.type.includes('zip') || file.type.includes('rar')) return '';
+    if (file.type.includes('video')) return '';
+    if (file.type.includes('audio')) return '';
+    return '';
+  };
+
+  return (
+    <div className="attach-preview">
+      {isImage && imgUrl
+        ? <img src={imgUrl} alt={file.name} />
+        : <span className="attach-icon">{fileIcon()}</span>
+      }
+      <div className="attach-info">
+        <div className="attach-name">{file.name}</div>
+        <div className="attach-size">{formatFileSize(file.size)}</div>
+      </div>
+      <button
+        className="btn btn-sm"
+        style={{background:'transparent',color:'var(--red)',border:'1px solid rgba(255,68,102,0.3)',flexShrink:0}}
+        onClick={onRemove}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
+
+function BroadcastPage({ selected }) {
   const [message, setMessage] = useState('');
-  const [delay, setDelay] = useState(3);
+  const [attachment, setAttachment] = useState(null);
+  const [delay, setDelay] = useState(5);
   const [randomDelay, setRandomDelay] = useState(false);
-  const [maxPerMin, setMaxPerMin] = useState(15);
-  const [broadcastId, setBroadcastId] = useState(null);
+  const [maxPerMin, setMaxPerMin] = useState(10);
   const [status, setStatus] = useState(null);
   const [polling, setPolling] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [tplName, setTplName] = useState('');
   const [tplMsg, setTplMsg] = useState('');
   const [tplTab, setTplTab] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const logRef = useRef(null);
   const pollRef = useRef(null);
+  const attachRef = useRef(null);
 
   useEffect(() => { loadTemplates(); }, []);
-  useEffect(() => { if(logRef.current) logRef.current.scrollTop=logRef.current.scrollHeight; }, [status]);
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [status?.log]);
 
   const loadTemplates = async () => {
-    try { const r = await api.get('/api/templates'); setTemplates(r.templates||[]); } catch(e) {}
+    const r = await api.get('/api/templates' + sqt()); setTemplates(r.templates || []);
   };
 
-  const startPoll = (bid) => {
-    if(pollRef.current) clearInterval(pollRef.current);
+  // Request notification permission once
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const notifyDone = (sent, failed) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Broadcast complete ✅', {
+        body: `Sent: ${sent}  •  Failed: ${failed}`,
+        icon: 'https://classy-boba-c11fe4.netlify.app/favicon.ico',
+      });
+    }
+  };
+
+  const startPoll = () => {
     setPolling(true);
+    // Close any existing SSE
+    if (pollRef.current) { pollRef.current.close?.(); clearInterval(pollRef.current); }
+
+    const tok = getSessionToken();
+    const jwt = getAppToken();
+    const url = API_BASE + '/api/broadcast/stream?session_token=' + encodeURIComponent(tok);
+
+    // Try SSE first, fall back to polling if not supported or error
+    try {
+      // SSE doesn't support custom headers natively — pass JWT as query param
+      const sseUrl = url + '&jwt=' + encodeURIComponent(jwt);
+      const es = new EventSource(sseUrl);
+      pollRef.current = es;
+      es.onmessage = (e) => {
+        try {
+          const s = JSON.parse(e.data);
+          setStatus(s);
+          if (!s.running && s.finished) {
+            es.close();
+            setPolling(false);
+            notifyDone(s.sent, s.failed);
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        // SSE failed — fall back to polling
+        es.close();
+        fallbackPoll();
+      };
+    } catch {
+      fallbackPoll();
+    }
+  };
+
+  const fallbackPoll = () => {
     pollRef.current = setInterval(async () => {
       try {
-        const s = await api.get('/api/unified/broadcast/status?broadcast_id='+bid);
+        const s = await api.get('/api/broadcast/status' + sqt());
         setStatus(s);
-        if(!s.running&&s.finished) { clearInterval(pollRef.current); pollRef.current=null; setPolling(false); }
-      } catch(e){}
-    }, 800);
+        if (!s.running && s.finished) {
+          clearInterval(pollRef.current);
+          setPolling(false);
+          notifyDone(s.sent, s.failed);
+        }
+      } catch {}
+    }, 1500);
   };
 
   const doStart = async () => {
-    if(!selected.length||!message.trim()) return;
-    const r = await api.post('/api/unified/broadcast/start',{
-      chat_ids:selected, message, delay, random_delay:randomDelay, max_per_minute:maxPerMin
+    if (!selected.length || (!message.trim() && !attachment)) return;
+    let file_id = null;
+    if (attachment) {
+      const fd = new FormData();
+      fd.append('file', attachment, attachment.name);
+      const uploaded = await api.upload('/api/upload' + sqt(), fd);
+      file_id = uploaded.file_id ?? uploaded.id ?? uploaded.url ?? null;
+    }
+    await api.post('/api/broadcast/start' + sqt(), {
+      chat_ids: selected,
+      message,
+      delay,
+      random_delay: randomDelay,
+      max_per_minute: maxPerMin,
+      ...(file_id !== null && { file_id }),
     });
-    setBroadcastId(r.broadcast_id);
-    startPoll(r.broadcast_id);
+    setConfirmOpen(false);
+    startPoll();
   };
 
   const doStop = async () => {
-    if(broadcastId) await api.post('/api/unified/broadcast/stop?broadcast_id='+broadcastId,{});
+    await api.post('/api/broadcast/stop' + sqt(), {});
   };
 
   const doSaveTpl = async () => {
-    if(!tplName||!tplMsg) return;
-    await api.post('/api/templates',{name:tplName,text:tplMsg});
+    if (!tplName || !tplMsg) return;
+    await api.post('/api/templates' + sqt(), { name: tplName, text: tplMsg });
     setTplName(''); setTplMsg(''); loadTemplates();
   };
 
-  const progress = status?Math.round((status.sent+status.failed)/(status.total||1)*100):0;
-  const tgCount = selected.filter(id=>id.startsWith('tg:')).length;
-  const slackCount = selected.filter(id=>id.startsWith('slack:')).length;
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setAttachment(file);
+    e.target.value = '';
+  };
 
-  return h('div',{className:'main'},
-    h('div',{className:'page'},
-      selected.length===0 && h('div',{className:'alert alert-info',style:{marginBottom:16}},'Select chats in the Chats tab first'),
+  const removeAttachment = () => {
+    setAttachment(null);
+    if (attachRef.current) attachRef.current.value = '';
+  };
 
-      h('div',{className:'card'},
-        h('div',{className:'card-title'},'Compose Message'),
-        h('div',{style:{display:'flex',gap:8,marginBottom:10}},
-          h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setTplTab(false),style:!tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}},'Compose'),
-          h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setTplTab(true),style:tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}},'Templates')
-        ),
-        !tplTab ? h(F,null,
-          h('textarea',{placeholder:'Type your broadcast message...',value:message,onChange:e=>setMessage(e.target.value),style:{minHeight:130}}),
-          h('div',{style:{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}},
-            message.length+' chars \u00b7 '+selected.length+' chats',
-            tgCount>0&&' ('+tgCount+' TG',
-            slackCount>0&&(tgCount>0?' + ':' (')+slackCount+' Slack',
-            (tgCount>0||slackCount>0)&&')')
-        ) : h('div',null,
-          h('div',{style:{marginBottom:10}},
-            templates.length===0 && h('p',{style:{color:'var(--muted)',fontSize:12}},'No templates yet'),
-            templates.map(t=>
-              h('div',{key:t.id,style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'8px 10px',background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}},
-                h('div',{style:{flex:1}},
-                  h('div',{style:{fontSize:12}},t.name),
-                  h('div',{style:{fontSize:11,color:'var(--muted)',marginTop:2,maxWidth:300,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},t.text)),
-                h('button',{className:'btn btn-secondary btn-sm',onClick:()=>{setMessage(t.text);setTplTab(false);}},'Use'),
-                h('button',{className:'btn btn-sm',style:{background:'transparent',color:'var(--muted)',border:'none'},onClick:()=>api.del('/api/templates/'+t.id).then(loadTemplates)},'\u2715')))),
-          h('div',{className:'sep'}),
-          h('label',null,'Template Name'), h('input',{type:'text',value:tplName,onChange:e=>setTplName(e.target.value)}),
-          h('label',null,'Message'), h('textarea',{value:tplMsg,onChange:e=>setTplMsg(e.target.value),style:{minHeight:80}}),
-          h('div',{style:{marginTop:10}}, h('button',{className:'btn btn-secondary btn-sm',onClick:doSaveTpl,disabled:!tplName||!tplMsg},'Save Template'))
-        )
-      ),
+  const canStart = selected.length > 0 && (message.trim().length > 0 || attachment !== null);
+  const progress = status ? Math.round((status.sent + status.failed) / (status.total || 1) * 100) : 0;
 
-      h('div',{className:'card'},
-        h('div',{className:'card-title'},'Settings'),
-        h('div',{className:'two-col'},
-          h('div',null, h('label',null,'Delay (s)'), h('input',{type:'number',min:1,max:60,value:delay,onChange:e=>setDelay(Number(e.target.value))})),
-          h('div',null, h('label',null,'Max per minute'), h('input',{type:'number',min:1,max:60,value:maxPerMin,onChange:e=>setMaxPerMin(Number(e.target.value))}))
-        ),
-        h('div',{className:'toggle-row'},
-          h('span',{className:'toggle-label'},'Random delay (+0\u20133s)'),
-          h('label',{className:'toggle'},
-            h('input',{type:'checkbox',checked:randomDelay,onChange:e=>setRandomDelay(e.target.checked)}),
-            h('span',{className:'toggle-slider'})))
-      ),
+  return (
+    <div className="main">
+      <div className="page">
+        {selected.length === 0 && (
+          <div className="alert alert-info" style={{marginBottom:16}}>
+            Select chats in the Chats tab first
+          </div>
+        )}
 
-      h('div',{style:{display:'flex',gap:10}},
-        h('button',{className:'btn btn-primary',style:{flex:1,justifyContent:'center'},onClick:doStart,disabled:polling||!selected.length||!message.trim()},
-          polling?h(F,null,h('span',{className:'spinner'}),' Broadcasting...'):'Start Broadcast ('+selected.length+' chats)'),
-        polling && h('button',{className:'btn btn-danger',onClick:doStop},'Stop')
-      ),
+        <div className="card">
+          <div className="card-title">Compose Message</div>
+          <div style={{display:'flex',gap:8,marginBottom:10}}>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setTplTab(false)} style={!tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}}>Compose</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setTplTab(true)} style={tplTab?{borderColor:'var(--accent)',color:'var(--accent)'}:{}}>Templates</button>
+          </div>
 
-      status && h('div',{className:'card',style:{marginTop:16}},
-        h('div',{className:'card-title'},'Progress'),
-        status.current_chat && h('div',{style:{marginBottom:10,display:'flex',alignItems:'center',gap:8}},
-          h('span',{className:'spinner'}), h('span',{className:'current-tag'},'Sending to: '+status.current_chat)),
-        h('div',{className:'progress-bar'}, h('div',{className:'progress-fill',style:{width:progress+'%'}})),
-        h('div',{style:{textAlign:'right',fontSize:11,color:'var(--muted)',marginBottom:12}},progress+'% ('+(status.sent+status.failed)+'/'+status.total+')'),
-        h('div',{className:'stats-row'},
-          h('div',{className:'stat'},h('div',{className:'stat-val val-blue'},status.total),h('div',{className:'stat-key'},'Total')),
-          h('div',{className:'stat'},h('div',{className:'stat-val val-green'},status.sent),h('div',{className:'stat-key'},'Sent')),
-          h('div',{className:'stat'},h('div',{className:'stat-val val-red'},status.failed),h('div',{className:'stat-key'},'Failed'))
-        ),
-        h('div',{className:'log-box',ref:logRef},
-          (status.log||[]).map((l,i)=>h('div',{key:i,className:'log-line'},l)),
-          !status.running&&status.finished&&h('div',{className:'log-line',style:{color:'var(--green)',marginTop:8}},'\u2501\u2501 BROADCAST COMPLETE \u2501\u2501'))
-      )
-    )
+          {!tplTab ? (
+            <>
+              <textarea placeholder="Type your broadcast message here..." value={message} onChange={e=>setMessage(e.target.value)} style={{minHeight:130}} />
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:4,textAlign:'right'}}>{message.length} chars / {selected.length} chats selected</div>
+
+              {/* Attachment section */}
+              <input
+                type="file"
+                ref={attachRef}
+                style={{display:'none'}}
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.7z"
+                onChange={handleFileChange}
+              />
+              <div className="attach-bar">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => attachRef.current && attachRef.current.click()}
+                  disabled={polling}
+                  style={attachment ? {borderColor:'var(--accent)',color:'var(--accent)'} : {}}
+                >
+                  {attachment ? 'Change File' : '+ Attach File'}
+                </button>
+                {!attachment && (
+                  <span style={{fontSize:11,color:'var(--muted)'}}>images, video, PDF, archives...</span>
+                )}
+              </div>
+              {attachment && (
+                <AttachmentPreview file={attachment} onRemove={removeAttachment} />
+              )}
+            </>
+          ) : (
+            <div>
+              <div style={{marginBottom:10}}>
+                {templates.length === 0 && <p style={{color:'var(--muted)',fontSize:12}}>No templates saved yet</p>}
+                {templates.map(t => (
+                  <div key={t.id} style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'8px 10px',background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,color:'var(--text)'}}>{t.name}</div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:300}}>{t.text}</div>
+                    </div>
+                    <button className="btn btn-secondary btn-sm" onClick={()=>{setMessage(t.text);setTplTab(false);}}>Use</button>
+                    <button className="btn btn-sm" style={{background:'transparent',color:'var(--muted)',border:'none',padding:'4px 6px'}} onClick={()=>api.del('/api/templates/'+t.id).then(loadTemplates)}>x</button>
+                  </div>
+                ))}
+              </div>
+              <div className="sep"/>
+              <label>New Template Name</label>
+              <input type="text" placeholder="Template name" value={tplName} onChange={e=>setTplName(e.target.value)} />
+              <label>Message Text</label>
+              <textarea placeholder="Template message..." value={tplMsg} onChange={e=>setTplMsg(e.target.value)} style={{minHeight:80}} />
+              <div style={{marginTop:10}}>
+                <button className="btn btn-secondary btn-sm" onClick={doSaveTpl} disabled={!tplName||!tplMsg}>Save Template</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+        <div className="card-title">Broadcast Settings</div>
+
+        <label>Delay between messages</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="60" step="1" value={delay} onChange={e=>setDelay(Number(e.target.value))} />
+            <span className="slider-val">{delay}s</span>
+          </div>
+          <div className="slider-labels"><span>1s</span><span>15s</span><span>30s</span><span>60s</span></div>
+        </div>
+
+        <label style={{marginTop:18}}>Max messages per minute</label>
+        <div className="slider-wrap">
+          <div className="slider-row">
+            <input type="range" min="1" max="30" step="1" value={maxPerMin} onChange={e=>setMaxPerMin(Number(e.target.value))} />
+            <span className="slider-val">{maxPerMin}/m</span>
+          </div>
+          <div className="slider-labels"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+        </div>
+
+        {(()=>{
+          const safe = delay >= 15 && maxPerMin <= 5;
+          const danger = delay < 5 || maxPerMin > 15;
+          const warn = !safe && !danger && (delay < 8 || maxPerMin > 10);
+          if (safe) return <div className="risk-box risk-safe"><span className="risk-icon">[OK]</span><div className="risk-text"><div className="risk-title">Safe mode  low risk</div><div className="risk-detail">Delay {delay}s + max {maxPerMin}/min. Great for new accounts, Telegram won't flag this.</div></div></div>;
+          if (danger) return <div className="risk-box risk-danger"><span className="risk-icon">[!!]</span><div className="risk-text"><div className="risk-title">High risk  ban likely!</div><div className="risk-detail">{delay < 5 ? `Delay ${delay}s is too short. ` : ''}{maxPerMin > 15 ? `${maxPerMin}/min is too aggressive. ` : ''}Recommended: delay  8s, max  10/min.</div></div></div>;
+          if (warn) return <div className="risk-box risk-warn"><span className="risk-icon">[!]</span><div className="risk-text"><div className="risk-title">Moderate risk  use carefully</div><div className="risk-detail">{delay < 8 ? `Delay ${delay}s is borderline. ` : ''}{maxPerMin > 10 ? `${maxPerMin}/min above safe threshold. ` : ''}OK for accounts 6m+. Enable random delay.</div></div></div>;
+          return <div className="risk-box risk-safe"><span className="risk-icon">[OK]</span><div className="risk-text"><div className="risk-title">Normal mode  acceptable risk</div><div className="risk-detail">Delay {delay}s + {maxPerMin}/min. Fine for accounts 3m+ with random delay on.</div></div></div>;
+        })()}
+
+        <div className="toggle-row" style={{marginTop:14}}>
+          <span className="toggle-label">Random delay (+0-10s)</span>
+          <label className="toggle">
+            <input type="checkbox" checked={randomDelay} onChange={e=>setRandomDelay(e.target.checked)} />
+            <span className="toggle-slider"/>
+          </label>
+        </div>
+        {randomDelay && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Will wait {delay}{delay+10}s between messages</div>}
+      </div>
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}}
+            onClick={() => setConfirmOpen(true)}
+            disabled={polling || !canStart}>
+            {polling
+              ? <><span className="spinner"/> Broadcasting...</>
+              : `Start Broadcast (${selected.length} chats${attachment ? ' + file' : ''})`
+            }
+          </button>
+          {polling && (
+            <button className="btn btn-danger" onClick={doStop}>Stop</button>
+          )}
+        </div>
+
+        {/* ── Confirm modal ── */}
+        {confirmOpen && (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+            <div className="card" style={{width:420,maxWidth:'92vw',padding:24}}>
+              <div className="card-title" style={{marginBottom:16}}>⚠️ Confirm Broadcast</div>
+              <div style={{fontSize:13,color:'var(--muted)',marginBottom:12}}>You are about to send to <strong style={{color:'var(--text)'}}>{selected.length} chats</strong>:</div>
+              <div style={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,fontSize:13,maxHeight:120,overflowY:'auto',whiteSpace:'pre-wrap',wordBreak:'break-word',color:'var(--text)',marginBottom:12}}>
+                {message || <span style={{color:'var(--muted)',fontStyle:'italic'}}>(no text)</span>}
+              </div>
+              {attachment && (
+                <div style={{fontSize:12,color:'var(--accent)',marginBottom:12}}>📎 {attachment.name}</div>
+              )}
+              <div style={{fontSize:12,color:'var(--muted)',marginBottom:20}}>
+                Delay: {delay}s{randomDelay ? ` + random 0–10s` : ''} · Max {maxPerMin}/min
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button className="btn btn-primary" style={{flex:1,justifyContent:'center'}} onClick={doStart}>
+                  ✅ Send it
+                </button>
+                <button className="btn btn-secondary" style={{flex:1,justifyContent:'center'}} onClick={() => setConfirmOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {status && (
+          <div className="card" style={{marginTop:16}}>
+            <div className="card-title">Progress</div>
+            {status.current_chat && (
+              <div style={{marginBottom:10,display:'flex',alignItems:'center',gap:8}}>
+                <span className="spinner"/>
+                <span className="current-tag">Sending to: {status.current_chat}</span>
+              </div>
+            )}
+            <div className="progress-bar">
+              <div className="progress-fill" style={{width: progress + '%'}} />
+            </div>
+            <div style={{textAlign:'right',fontSize:11,color:'var(--muted)',marginBottom:12}}>{progress}% ({status.sent + status.failed}/{status.total})</div>
+            <div className="stats-row">
+              <div className="stat"><div className="stat-val val-blue">{status.total}</div><div className="stat-key">Total</div></div>
+              <div className="stat"><div className="stat-val val-green">{status.sent}</div><div className="stat-key">Sent</div></div>
+              <div className="stat"><div className="stat-val val-red">{status.failed}</div><div className="stat-key">Failed</div></div>
+            </div>
+            <div className="log-box" ref={logRef}>
+              {(status.log || []).map((l,i) => <div key={i} className="log-line">{l}</div>)}
+              {!status.running && status.finished && <div className="log-line" style={{color:'var(--green)',marginTop:8}}>-- BROADCAST COMPLETE --</div>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-// ── History Page ────────────────────────────────────────────────────────────
-function HistoryPage() {
+function HistoryPage({ appUser }) {
   const [history, setHistory] = useState([]);
-  useEffect(() => { api.get('/api/history').then(r=>setHistory(r.history||[])).catch(()=>{}); }, []);
+  const [selected, setSelected] = useState(null);
+  useEffect(() => { api.get('/api/history').then(r => setHistory(r.history || [])); }, []);
+  const isAdmin = appUser?.role === 'admin';
 
-  const typeBadge = (t) => {
-    if(t==='mixed') return h('span',{className:'badge badge-mixed'},'Mixed');
-    if(t==='slack') return h('span',{className:'badge badge-slack'},'Slack');
-    return h('span',{className:'badge badge-tg'},'TG');
-  };
+  return (
+    <div className="page">
+      <div className="card">
+        <div className="card-title">Broadcast History</div>
+        {history.length === 0 ? (
+          <p style={{color:'var(--muted)',fontSize:12}}>No broadcasts yet</p>
+        ) : (
+          <div style={{overflowX:'auto'}}>
+            <table>
+              <thead>
+                <tr>
+                  {isAdmin && <th>User</th>}
+                  <th>Message</th>
+                  <th>Sent</th>
+                  <th>Failed</th>
+                  <th>Total</th>
+                  <th>Started</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(h => (
+                  <tr key={h.id} onClick={() => setSelected(h)}
+                    style={{cursor:'pointer'}}
+                    onMouseEnter={e => e.currentTarget.style.background='var(--card-hover, rgba(255,255,255,0.04))'}
+                    onMouseLeave={e => e.currentTarget.style.background=''}>
+                    {isAdmin && (
+                      <td>
+                        <span style={{
+                          display:'inline-block',padding:'2px 8px',borderRadius:10,
+                          fontSize:10,fontWeight:600,background:'var(--accent)22',
+                          color:'var(--accent)',border:'1px solid var(--accent)44',
+                          whiteSpace:'nowrap',
+                        }}>{h.started_by || '—'}</span>
+                      </td>
+                    )}
+                    <td style={{maxWidth:200,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.message || <span style={{color:'var(--muted)',fontStyle:'italic'}}>file only</span>}</td>
+                    <td><span className="badge badge-green">{h.sent}</span></td>
+                    <td><span className={`badge ${h.failed>0?'badge-red':'badge-green'}`}>{h.failed}</span></td>
+                    <td>{h.total}</td>
+                    <td style={{color:'var(--muted)',fontSize:11}}>{h.started_at?.slice(0,16).replace('T',' ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-  return h('div',{className:'page'},
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Broadcast History'),
-      history.length===0 ? h('p',{style:{color:'var(--muted)',fontSize:12}},'No broadcasts yet') :
-      h('div',{style:{overflowX:'auto'}},
-        h('table',null,
-          h('thead',null,h('tr',null,
-            h('th',null,'Channel'), h('th',null,'Message'), h('th',null,'Sent'), h('th',null,'Failed'), h('th',null,'Total'), h('th',null,'Started'))),
-          h('tbody',null,
-            history.map(hh=>h('tr',{key:hh.id},
-              h('td',null,typeBadge(hh.channel_type)),
-              h('td',{style:{maxWidth:200,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},hh.message),
-              h('td',null,h('span',{className:'badge badge-green'},hh.sent)),
-              h('td',null,h('span',{className:'badge '+(hh.failed>0?'badge-red':'badge-green')},hh.failed)),
-              h('td',null,hh.total),
-              h('td',{style:{color:'var(--muted)',fontSize:11}},hh.started_at?.slice(0,16).replace('T',' '))
-            ))
-          )
-        )
-      )
-    )
+      {/* ── Detail modal ── */}
+      {selected && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}
+          onClick={() => setSelected(null)}>
+          <div className="card" style={{width:480,maxWidth:'94vw',padding:24,maxHeight:'80vh',overflowY:'auto'}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div className="card-title" style={{margin:0}}>Broadcast Details</div>
+              <button className="btn btn-secondary" style={{padding:'4px 12px',fontSize:12}} onClick={() => setSelected(null)}>✕ Close</button>
+            </div>
+            {isAdmin && selected.started_by && (
+              <div style={{marginBottom:10,fontSize:12,color:'var(--muted)'}}>
+                Started by: <strong style={{color:'var(--accent)'}}>{selected.started_by}</strong>
+              </div>
+            )}
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:6}}>Message:</div>
+            <div style={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,
+              fontSize:13,whiteSpace:'pre-wrap',wordBreak:'break-word',color:'var(--text)',marginBottom:16,minHeight:40}}>
+              {selected.message || <span style={{fontStyle:'italic',color:'var(--muted)'}}>no text (file only)</span>}
+            </div>
+            <div className="stats-row" style={{marginBottom:16}}>
+              <div className="stat"><div className="stat-val val-blue">{selected.total}</div><div className="stat-key">Total</div></div>
+              <div className="stat"><div className="stat-val val-green">{selected.sent}</div><div className="stat-key">Sent</div></div>
+              <div className="stat"><div className="stat-val val-red">{selected.failed}</div><div className="stat-key">Failed</div></div>
+            </div>
+            <div style={{display:'flex',gap:16,fontSize:11,color:'var(--muted)',marginBottom: selected.log?.length ? 16 : 0}}>
+              <span>Started: {selected.started_at?.slice(0,16).replace('T',' ')}</span>
+              {selected.finished_at && <span>Finished: {selected.finished_at?.slice(0,16).replace('T',' ')}</span>}
+            </div>
+            {selected.log?.length > 0 && (
+              <>
+                <div style={{fontSize:12,color:'var(--muted)',marginBottom:6}}>Delivery log:</div>
+                <div className="log-box" style={{maxHeight:200,fontSize:11}}>
+                  {selected.log.map((l,i) => (
+                    <div key={i} className="log-line" style={{
+                      color: l.startsWith('OK') ? 'var(--green)' : l.startsWith('FAIL') ? 'var(--red,#f66)' : 'var(--muted)'
+                    }}>{l}</div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-// ── Accounts Page ──────────────────────────────────────────────────────────
-function AccountsPage() {
-  const [accounts, setAccounts] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const perPage = 50;
-  const [search, setSearch] = useState('');
-  const [filterMessenger, setFilterMessenger] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterOwner, setFilterOwner] = useState('');
-  const [filterTag, setFilterTag] = useState('');
-  const [tags, setTags] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [newTag, setNewTag] = useState('');
-  const [modal, setModal] = useState(null); // 'owner' | 'tags' | null
-  const [modalOwner, setModalOwner] = useState('');
-  const [modalTags, setModalTags] = useState([]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+// ─── SettingsPage ─────────────────────────────────────────────────────────────
+function SettingsPage({ appUser, onLogout }) {
+  const isAdmin = appUser?.role === 'admin';
+  const [section, setSection] = useState('password'); // 'password' | 'users' | 'backend' | 'tg'
+
+  // ── Change My Password state ──
+  const [oldPw, setOldPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwErr, setPwErr] = useState('');
+  const [pwOk, setPwOk] = useState(false);
+
+  const doChangePw = async () => {
+    if (newPw !== newPw2) { setPwErr('New passwords do not match'); return; }
+    if (newPw.length < 6) { setPwErr('Password must be at least 6 characters'); return; }
+    setPwLoading(true); setPwErr('');
     try {
-      let q = '/api/accounts?page='+page+'&per_page='+perPage;
-      if (search) q += '&search='+encodeURIComponent(search);
-      if (filterMessenger) q += '&messenger='+filterMessenger;
-      if (filterType) q += '&type='+filterType;
-      if (filterOwner) q += '&owner_id='+filterOwner;
-      if (filterTag) q += '&tags='+filterTag;
-      const r = await api.get(q);
-      setAccounts(r.accounts||[]);
-      setTotal(r.total||0);
-    } catch(e) {}
-    setLoading(false);
-  }, [page, search, filterMessenger, filterType, filterOwner, filterTag]);
-
-  const loadTags = () => api.get('/api/accounts/tags').then(r => setTags(r.tags||[])).catch(()=>{});
-  const loadUsers = () => api.get('/api/auth/users').then(r => setUsers(r.users||r||[])).catch(()=>{});
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { loadTags(); loadUsers(); }, []);
-
-  const toggleSelect = (id) => setSelected(p => p.includes(id) ? p.filter(x=>x!==id) : [...p,id]);
-  const selectAll = () => setSelected(accounts.map(a=>a.id));
-  const clearAll = () => setSelected([]);
-
-  const addTag = async () => {
-    if (!newTag.trim()) return;
-    await api.post('/api/accounts/tags', {name: newTag.trim()});
-    setNewTag('');
-    loadTags();
+      await api.put('/api/auth/me/password', { old_password: oldPw, new_password: newPw });
+      setPwOk(true); setOldPw(''); setNewPw(''); setNewPw2('');
+    } catch(e) { setPwErr(e.message); }
+    setPwLoading(false);
   };
 
-  const deleteTag = async (id) => {
-    await api.del('/api/accounts/tags/'+id);
-    loadTags();
-    load();
-  };
-
-  const doBulkOwner = async () => {
-    if (!selected.length) return;
-    await api.put('/api/accounts/bulk/owner', {account_ids: selected, owner_id: modalOwner ? parseInt(modalOwner) : null});
-    setModal(null);
-    setSelected([]);
-    load();
-  };
-
-  const doBulkTags = async () => {
-    if (!selected.length || !modalTags.length) return;
-    await api.post('/api/accounts/bulk/tags', {account_ids: selected, tag_ids: modalTags.map(Number)});
-    setModal(null);
-    setModalTags([]);
-    setSelected([]);
-    load();
-  };
-
-  const doBulkRemoveTags = async () => {
-    if (!selected.length || !modalTags.length) return;
-    await api.del_body('/api/accounts/bulk/tags', {account_ids: selected, tag_ids: modalTags.map(Number)});
-    setModal(null);
-    setModalTags([]);
-    setSelected([]);
-    load();
-  };
-
-  const totalPages = Math.ceil(total / perPage);
-  const messengerBadge = (m) => m==='telegram' ? h('span',{className:'badge badge-tg'},'TG') : h('span',{className:'badge badge-slack'},'Slack');
-  const typeBadge = (t) => {
-    if(t==='channel') return h('span',{className:'badge badge-blue'},'Channel');
-    if(t==='group') return h('span',{className:'badge badge-green'},'Group');
-    return h('span',{className:'badge badge-mixed'},'DM');
-  };
-
-  return h('div',{className:'page'},
-    // Filters
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Accounts'),
-      h('div',{className:'search-row'},
-        h('input',{type:'text',placeholder:'Search by name...',value:search,
-          onChange:e=>{setSearch(e.target.value);setPage(1);}})
-      ),
-      h('div',{className:'filter-row'},
-        h('span',{style:{fontSize:11,color:'var(--muted)',marginRight:4}},'Messenger:'),
-        ['','telegram','slack'].map(v=>
-          h('button',{key:'m'+v,className:'filter-btn'+(filterMessenger===v?' active':''),
-            onClick:()=>{setFilterMessenger(v);setPage(1);}}, v||'All')
-        )
-      ),
-      h('div',{className:'filter-row'},
-        h('span',{style:{fontSize:11,color:'var(--muted)',marginRight:4}},'Type:'),
-        ['','channel','group','dm'].map(v=>
-          h('button',{key:'t'+v,className:'filter-btn'+(filterType===v?' active':''),
-            onClick:()=>{setFilterType(v);setPage(1);}}, v||'All')
-        )
-      ),
-      h('div',{className:'filter-row'},
-        h('span',{style:{fontSize:11,color:'var(--muted)',marginRight:4}},'Owner:'),
-        h('button',{className:'filter-btn'+(filterOwner===''?' active':''),onClick:()=>{setFilterOwner('');setPage(1);}},'All'),
-        h('button',{className:'filter-btn'+(filterOwner==='unassigned'?' active':''),onClick:()=>{setFilterOwner('unassigned');setPage(1);}},'Unassigned'),
-        users.map(u=>h('button',{key:'o'+u.id,className:'filter-btn'+(filterOwner===String(u.id)?' active':''),
-          onClick:()=>{setFilterOwner(String(u.id));setPage(1);}},u.username))
-      ),
-      tags.length>0 && h('div',{className:'filter-row'},
-        h('span',{style:{fontSize:11,color:'var(--muted)',marginRight:4}},'Tag:'),
-        h('button',{className:'filter-btn'+(filterTag===''?' active':''),onClick:()=>{setFilterTag('');setPage(1);}},'All'),
-        tags.map(t=>h('button',{key:'tag'+t.id,className:'filter-btn'+(filterTag===String(t.id)?' active':''),
-          onClick:()=>{setFilterTag(String(t.id));setPage(1);}},t.name))
-      )
-    ),
-
-    // Tag management
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Tags'),
-      h('div',{style:{display:'flex',gap:8,alignItems:'flex-end',marginBottom:12}},
-        h('input',{type:'text',placeholder:'New tag name',value:newTag,onChange:e=>setNewTag(e.target.value),
-          style:{width:200},onKeyDown:e=>{if(e.key==='Enter')addTag();}}),
-        h('button',{className:'btn btn-primary btn-sm',onClick:addTag,disabled:!newTag.trim()},'Add')
-      ),
-      h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-        tags.map(t=>h('span',{key:t.id,className:'tag-chip'},
-          t.name,
-          h('span',{className:'tag-chip-rm',onClick:()=>deleteTag(t.id)},'\u00d7')
-        ))
-      )
-    ),
-
-    // Bulk actions bar
-    selected.length>0 && h('div',{className:'bulk-bar'},
-      h('span',{style:{fontSize:12}},selected.length+' selected'),
-      h('button',{className:'btn btn-primary btn-sm',onClick:()=>{setModalOwner('');setModal('owner');}},'Assign Owner'),
-      h('button',{className:'btn btn-secondary btn-sm',onClick:()=>{setModalTags([]);setModal('tags');}},'Add Tags'),
-      h('button',{className:'btn btn-danger btn-sm',onClick:()=>{setModalTags([]);setModal('removetags');}},'Remove Tags'),
-      h('button',{className:'btn btn-secondary btn-sm',onClick:clearAll},'Clear')
-    ),
-
-    // Table
-    h('div',{className:'card'},
-      loading ? h('div',{style:{textAlign:'center',padding:20}},h('span',{className:'spinner'})) :
-      h('div',{style:{overflowX:'auto'}},
-        h('table',null,
-          h('thead',null,h('tr',null,
-            h('th',{style:{width:30}},h('input',{type:'checkbox',className:'acc-checkbox',
-              checked:selected.length===accounts.length&&accounts.length>0,
-              onChange:e=>e.target.checked?selectAll():clearAll()})),
-            h('th',null,'Name'),
-            h('th',null,'Messenger'),
-            h('th',null,'External Channel'),
-            h('th',null,'Type'),
-            h('th',null,'Tags'),
-            h('th',null,'Owner'),
-            h('th',null,'Created At')
-          )),
-          h('tbody',null,
-            accounts.length===0 ? h('tr',null,h('td',{colSpan:8,style:{color:'var(--muted)',textAlign:'center'}},'No accounts found')) :
-            accounts.map(a=>h('tr',{key:a.id},
-              h('td',null,h('input',{type:'checkbox',className:'acc-checkbox',checked:selected.includes(a.id),onChange:()=>toggleSelect(a.id)})),
-              h('td',null,a.name),
-              h('td',null,messengerBadge(a.messenger)),
-              h('td',{style:{fontSize:11,color:'var(--muted)'}},a.external_channel),
-              h('td',null,typeBadge(a.type)),
-              h('td',null,h('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
-                (a.tags||[]).map(t=>h('span',{key:t.id,className:'tag-chip'},t.name)))),
-              h('td',null,a.owner_name ? h('span',{className:'badge badge-blue'},a.owner_name) : h('span',{style:{color:'var(--muted)',fontSize:11}},'—')),
-              h('td',{style:{color:'var(--muted)',fontSize:11}},a.created_at?.slice(0,16).replace('T',' '))
-            ))
-          )
-        )
-      ),
-      // Pagination
-      totalPages>1 && h('div',{style:{display:'flex',justifyContent:'center',gap:8,marginTop:12}},
-        h('button',{className:'btn btn-secondary btn-sm',disabled:page<=1,onClick:()=>setPage(page-1)},'Prev'),
-        h('span',{style:{fontSize:12,color:'var(--muted)',lineHeight:'30px'}},
-          'Page '+page+' of '+totalPages+' ('+total+' total)'),
-        h('button',{className:'btn btn-secondary btn-sm',disabled:page>=totalPages,onClick:()=>setPage(page+1)},'Next')
-      )
-    ),
-
-    // Modals
-    modal==='owner' && h('div',{className:'modal-overlay',onClick:()=>setModal(null)},
-      h('div',{className:'modal-box',onClick:e=>e.stopPropagation()},
-        h('div',{className:'card-title'},'Assign Owner'),
-        h('select',{value:modalOwner,onChange:e=>setModalOwner(e.target.value),
-          style:{width:'100%',padding:'8px 12px',background:'var(--bg)',border:'1px solid var(--border)',
-            borderRadius:'var(--radius)',color:'var(--text)',fontFamily:'inherit',fontSize:13,marginBottom:16}},
-          h('option',{value:''},'— Unassign —'),
-          users.map(u=>h('option',{key:u.id,value:String(u.id)},u.username))
-        ),
-        h('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
-          h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setModal(null)},'Cancel'),
-          h('button',{className:'btn btn-primary btn-sm',onClick:doBulkOwner},'Apply')
-        )
-      )
-    ),
-
-    (modal==='tags'||modal==='removetags') && h('div',{className:'modal-overlay',onClick:()=>setModal(null)},
-      h('div',{className:'modal-box',onClick:e=>e.stopPropagation()},
-        h('div',{className:'card-title'},modal==='tags'?'Add Tags':'Remove Tags'),
-        h('div',{style:{display:'flex',flexDirection:'column',gap:8,marginBottom:16}},
-          tags.map(t=>h('label',{key:t.id,style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',margin:0}},
-            h('input',{type:'checkbox',checked:modalTags.includes(String(t.id)),
-              onChange:e=>setModalTags(p=>e.target.checked?[...p,String(t.id)]:p.filter(x=>x!==String(t.id)))}),
-            h('span',{style:{fontSize:12}},t.name)
-          ))
-        ),
-        tags.length===0 && h('p',{style:{color:'var(--muted)',fontSize:12,marginBottom:16}},'No tags created yet.'),
-        h('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
-          h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setModal(null)},'Cancel'),
-          h('button',{className:'btn '+(modal==='removetags'?'btn-danger':'btn-primary')+' btn-sm',
-            onClick:modal==='tags'?doBulkTags:doBulkRemoveTags,disabled:!modalTags.length},
-            modal==='tags'?'Add':'Remove')
-        )
-      )
-    )
-  );
-}
-
-// ── Dashboard Page ─────────────────────────────────────────────────────────
-function DashboardPage() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // ── User Management state (admin only) ──
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [creating, setCreating] = useState(false);
+  const [userMsg, setUserMsg] = useState('');
+  const [userErr, setUserErr] = useState('');
+  const [newCreds, setNewCreds] = useState(null);
 
   useEffect(() => {
-    api.get('/api/dashboard').then(r => setData(r)).catch(()=>{}).finally(()=>setLoading(false));
-  }, []);
+    if (section === 'users' && isAdmin) loadUsers();
+  }, [section]);
 
-  if (loading) return h('div',{className:'page',style:{display:'flex',alignItems:'center',justifyContent:'center'}},
-    h('span',{className:'spinner'}));
-  if (!data) return h('div',{className:'page'},h('div',{className:'card'},h('p',{style:{color:'var(--muted)'}},'Failed to load dashboard')));
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try { const r = await api.get('/api/auth/users'); setUsers(r.users); }
+    catch { setUserErr('Failed to load users'); }
+    setUsersLoading(false);
+  };
 
-  const maxCount = Math.max(1, ...data.chats_by_manager.map(m=>m.chats_count));
+  const createUser = async () => {
+    if (!newUsername.trim()) return;
+    setCreating(true); setUserErr(''); setUserMsg('');
+    try {
+      const r = await api.post('/api/auth/users', { username: newUsername.trim(), role: newRole });
+      setNewCreds({ username: r.username, password: r.password, role: r.role });
+      setNewUsername(''); setNewRole('user'); loadUsers();
+    } catch(e) { setUserErr(e.message); }
+    setCreating(false);
+  };
 
-  return h('div',{className:'page'},
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Dashboard'),
-      h('div',{className:'dash-grid'},
-        [{label:'Total Chats',val:data.total_chats,color:'var(--accent)'},
-         {label:'Telegram',val:data.telegram_chats,color:'var(--tg)'},
-         {label:'Slack',val:data.slack_chats,color:'var(--slack)'},
-         {label:'Channels',val:data.channels,color:'var(--accent)'},
-         {label:'Groups',val:data.groups,color:'var(--green)'},
-         {label:'DM',val:data.dm,color:'var(--yellow)'}
-        ].map(c=>h('div',{key:c.label,className:'dash-card'},
-          h('div',{className:'dash-card-val',style:{color:c.color}},c.val),
-          h('div',{className:'dash-card-label'},c.label)
-        ))
-      )
-    ),
+  const deleteUser = async (uid, uname) => {
+    if (!window.confirm(`Delete user "${uname}"?`)) return;
+    try { await api.del('/api/auth/users/' + uid); loadUsers(); setUserMsg('User deleted'); }
+    catch(e) { setUserErr(e.message); }
+  };
 
-    h('div',{className:'card'},
-      h('div',{className:'card-title'},'Chats by Manager'),
-      data.chats_by_manager.length===0
-        ? h('p',{style:{color:'var(--muted)',fontSize:12}},'No data')
-        : data.chats_by_manager.map(m=>
-            h('div',{key:m.manager_name,className:'bar-row'},
-              h('div',{className:'bar-name'},m.manager_name),
-              h('div',{className:'bar-fill-bg'},
-                h('div',{className:'bar-fill',style:{width:Math.round(m.chats_count/maxCount*100)+'%',
-                  background:m.manager_name==='Unassigned'?'var(--muted)':'var(--accent)'}})
-              ),
-              h('div',{className:'bar-count'},m.chats_count)
-            )
-          )
-    )
+  const resetPassword = async (uid, uname) => {
+    if (!window.confirm(`Reset password for "${uname}"?`)) return;
+    try {
+      const r = await api.put('/api/auth/users/' + uid + '/password', {});
+      setNewCreds({ username: uname, password: r.password, role: '' });
+    } catch(e) { setUserErr(e.message); }
+  };
+
+  // ── Backend URL state ──
+  const [backendUrl, setBackendUrl] = useState(API_BASE);
+  const [urlTesting, setUrlTesting] = useState(false);
+  const [urlErr, setUrlErr] = useState('');
+  const [urlOk, setUrlOk] = useState(false);
+
+  const testUrl = async () => {
+    setUrlTesting(true); setUrlErr(''); setUrlOk(false);
+    try {
+      const r = await fetch(backendUrl.replace(/\/$/, '') + '/health');
+      if (r.ok) setUrlOk(true); else setUrlErr('Server error: ' + r.status);
+    } catch { setUrlErr('Cannot connect. Check the URL.'); }
+    setUrlTesting(false);
+  };
+
+  const saveUrl = () => {
+    const clean = backendUrl.replace(/\/$/, '');
+    localStorage.setItem('api_base', clean); sessionStorage.setItem('api_base', clean);
+    API_BASE = clean;
+    setUrlOk(true);
+  };
+
+  // ── TG Session ──
+  const clearTgSession = () => {
+    clearSessionToken();
+    localStorage.removeItem('tgb_phone');
+    localStorage.removeItem('tgb_tg_creds');
+    setUserMsg('TG session cleared. Reload to re-login.');
+  };
+
+  const roleBadge = (role) => (
+    <span style={{
+      display:'inline-block', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700,
+      background: role==='admin' ? 'var(--accent)22' : 'var(--surface2)',
+      color: role==='admin' ? 'var(--accent)' : 'var(--muted)',
+      border: `1px solid ${role==='admin' ? 'var(--accent)44' : 'var(--border)'}`,
+    }}>{role}</span>
+  );
+
+  const SECTIONS_BASE = [
+    { key: 'password', label: '🔑 My Password' },
+    { key: 'backend', label: '🌐 Backend URL' },
+    { key: 'tg', label: '📱 Telegram Session' },
+    { key: 'danger', label: '🚪 Logout' },
+  ];
+  const SECTIONS = isAdmin
+    ? [SECTIONS_BASE[0], { key: 'users', label: '👥 User Management' }].concat(SECTIONS_BASE.slice(1))
+    : SECTIONS_BASE;
+
+  const sectionStyle = { display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 560 };
+  const headerStyle = { fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
+  const subStyle = { fontSize: 12, color: 'var(--muted)', marginBottom: 18 };
+
+  return (
+    <div style={{ display: 'flex', gap: 0, minHeight: '100%' }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 200, minHeight: '100%', background: 'var(--surface2)',
+        borderRight: '1px solid var(--border)', padding: '24px 0', flexShrink: 0,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', padding: '0 20px', marginBottom: 12, letterSpacing: '0.1em' }}>
+          SETTINGS
+        </div>
+        {SECTIONS.map(s => (
+          <button key={s.key} onClick={() => setSection(s.key)}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '10px 20px', fontSize: 13, fontWeight: section === s.key ? 700 : 400,
+              color: section === s.key ? 'var(--accent)' : 'var(--text)',
+              background: section === s.key ? 'var(--accent)11' : 'transparent',
+              border: 'none',
+              borderLeft: section === s.key ? '3px solid var(--accent)' : '3px solid transparent',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+
+        {/* ── My Password ── */}
+        {section === 'password' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Change My Password</div>
+              <div style={subStyle}>Update your login password. Minimum 6 characters.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              {pwOk ? (
+                <div>
+                  <div className="alert alert-ok" style={{ marginBottom: 12 }}>Password changed successfully!</div>
+                  <button className="btn btn-secondary" onClick={() => setPwOk(false)}>Change again</button>
+                </div>
+              ) : (
+                <>
+                  <label>Current Password</label>
+                  <input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)} style={{ marginBottom: 12 }} />
+                  <label>New Password</label>
+                  <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} style={{ marginBottom: 12 }} />
+                  <label>Confirm New Password</label>
+                  <input type="password" value={newPw2} onChange={e => setNewPw2(e.target.value)} style={{ marginBottom: 12 }} />
+                  {pwErr && <div className="alert alert-err" style={{ marginBottom: 12 }}>{pwErr}</div>}
+                  <button className="btn btn-primary" onClick={doChangePw}
+                    disabled={pwLoading || !oldPw || !newPw || !newPw2}>
+                    {pwLoading ? <><span className="spinner" /> Saving...</> : 'Save New Password'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── User Management (admin) ── */}
+        {section === 'users' && isAdmin && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>User Management</div>
+              <div style={subStyle}>Create users, reset passwords, manage roles.</div>
+            </div>
+
+            {userErr && <div className="alert alert-err">{userErr}</div>}
+            {userMsg && <div className="alert alert-ok">{userMsg}</div>}
+
+            {/* New credentials */}
+            {newCreds && (
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--accent)44', borderRadius: 'var(--radius)', padding: 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginBottom: 8 }}>
+                  {newCreds.role ? 'User created' : 'Password reset'} — save these credentials!
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 4 }}>
+                  <span style={{ color: 'var(--muted)' }}>Username: </span>
+                  <span style={{ color: 'var(--text)', fontWeight: 700 }}>{newCreds.username}</span>
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 12 }}>
+                  <span style={{ color: 'var(--muted)' }}>Password: </span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.05em' }}>{newCreds.password}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
+                    navigator.clipboard.writeText(`Username: ${newCreds.username}\nPassword: ${newCreds.password}`);
+                    setUserMsg('Copied!'); setTimeout(() => setUserMsg(''), 1500);
+                  }}>Copy</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setNewCreds(null)}>Dismiss</button>
+                </div>
+              </div>
+            )}
+
+            {/* Create user */}
+            <div className="card" style={{ padding: 16 }}>
+              <div className="card-title" style={{ marginBottom: 12 }}>Create New User</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label>Username</label>
+                  <input type="text" placeholder="username" value={newUsername}
+                    onChange={e => setNewUsername(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && createUser()} />
+                </div>
+                <div>
+                  <label>Role</label>
+                  <select value={newRole} onChange={e => setNewRole(e.target.value)}
+                    style={{ display: 'block', background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '8px 12px', fontSize: 13, cursor: 'pointer' }}>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <button className="btn btn-primary btn-sm" onClick={createUser} disabled={creating || !newUsername.trim()}>
+                  {creating ? <span className="spinner" /> : '+ Create'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>Password will be auto-generated and shown once.</div>
+            </div>
+
+            {/* Users list */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div className="card-title" style={{ margin: 0 }}>All Users</div>
+              </div>
+              <div>
+                {usersLoading ? (
+                  <div style={{ textAlign: 'center', padding: 24 }}><span className="spinner" /></div>
+                ) : users.map(u => (
+                  <div key={u.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    borderBottom: '1px solid var(--border)',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{u.username}</span>
+                        {roleBadge(u.role)}
+                        {String(u.id) === String(appUser.id) && (
+                          <span style={{ fontSize: 10, color: 'var(--accent)' }}>(you)</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        Created {u.created_at ? u.created_at.slice(0, 10) : '—'}
+                      </div>
+                    </div>
+                    {String(u.id) !== String(appUser.id) && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-secondary btn-sm"
+                          onClick={() => resetPassword(u.id, u.username)}
+                          style={{ fontSize: 11, padding: '3px 8px' }}>
+                          Reset PW
+                        </button>
+                        <button className="btn btn-secondary btn-sm"
+                          onClick={() => deleteUser(u.id, u.username)}
+                          style={{ fontSize: 11, padding: '3px 8px', color: 'var(--err)' }}>
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Backend URL ── */}
+        {section === 'backend' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Backend URL</div>
+              <div style={subStyle}>The Railway backend address. Change only if you moved the deployment.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <label>Backend URL</label>
+              <input type="text" placeholder="https://your-app.railway.app"
+                value={backendUrl} onChange={e => { setBackendUrl(e.target.value); setUrlOk(false); setUrlErr(''); }} />
+              {urlErr && <div className="alert alert-err" style={{ marginTop: 8 }}>{urlErr}</div>}
+              {urlOk && <div className="alert alert-ok" style={{ marginTop: 8 }}>✓ Saved & reachable</div>}
+              <div className="row-gap" style={{ marginTop: 14 }}>
+                <button className="btn btn-secondary" onClick={testUrl} disabled={urlTesting || !backendUrl}>
+                  {urlTesting ? <><span className="spinner" /> Checking...</> : 'Test Connection'}
+                </button>
+                <button className="btn btn-primary" onClick={saveUrl} disabled={!backendUrl}>Save</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Telegram Session ── */}
+        {section === 'tg' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Telegram Session</div>
+              <div style={subStyle}>Your saved Telegram credentials and session token.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontFamily: 'monospace', fontSize: 12, marginBottom: 10 }}>
+                <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Session Token</div>
+                <div style={{ color: 'var(--text)', wordBreak: 'break-all', background: 'var(--surface2)', padding: '8px 10px', borderRadius: 6 }}>
+                  {getSessionToken() || '(none)'}
+                </div>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: 12, marginBottom: 16 }}>
+                <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Phone</div>
+                <div style={{ color: 'var(--text)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: 6 }}>
+                  {localStorage.getItem('tgb_phone') || '(none)'}
+                </div>
+              </div>
+              {userMsg && <div className="alert alert-ok" style={{ marginBottom: 12 }}>{userMsg}</div>}
+              <button className="btn btn-secondary" onClick={clearTgSession}
+                style={{ color: 'var(--err)', borderColor: 'var(--err)44' }}>
+                Clear Session & Re-login
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Logout ── */}
+        {section === 'danger' && (
+          <div style={sectionStyle}>
+            <div>
+              <div style={headerStyle}>Sign Out</div>
+              <div style={subStyle}>Logs you out from both the app and Telegram session.</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+                You will be returned to the login screen. Your Telegram session will be closed.
+              </p>
+              <button className="btn btn-secondary" onClick={onLogout}
+                style={{ color: 'var(--err)', borderColor: 'var(--err)44' }}>
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }
 
-// ── App ─────────────────────────────────────────────────────────────────────
 function App() {
-  const [appUser, setAppUser] = useState(null);
-  const [tab, setTab] = useState('broadcast');
+  // appUser = { id, username, role } — app-level login via password
+  const [appUser, setAppUser] = useState(() => getAppUser());
+  // tgUser = { name, username } — Telegram session
+  const [tgUser, setTgUser] = useState(null);
+  const [tab, setTab] = useState('chats');
   const [selected, setSelected] = useState([]);
-  const [integrations, setIntegrations] = useState(null);
-  const [showSetup, setShowSetup] = useState(!sessionStorage.getItem('api_base'));
-  const [checking, setChecking] = useState(true);
+  const [checkingTg, setCheckingTg] = useState(false);
 
-  const loadIntegrations = useCallback(async () => {
-    try { const r = await api.get('/api/integrations/status'); setIntegrations(r);
-      if(r.telegram?.session_token) setTgSession(r.telegram.session_token);
-      if(r.slack?.session_token) setSlackSession(r.slack.session_token);
-    } catch(e){}
+
+  const tryAutoTgLogin = useCallback(async () => {
+    const tok = getSessionToken();
+    const creds = getTgCreds();
+    if (!tok && !creds) return;
+    setCheckingTg(true);
+    try {
+      // Try existing session first
+      if (tok) {
+        const url = API_BASE + '/api/me?session_token=' + encodeURIComponent(tok);
+        const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getAppToken() } });
+        if (r.ok) {
+          const me = await r.json();
+          if (me && me.name) { setTgUser(me); setCheckingTg(false); return; }
+        }
+      }
+      // Session dead but we have creds — reconnect silently
+      if (creds) {
+        const r2 = await api.post('/api/connect', { api_id: parseInt(creds.apiId), api_hash: creds.apiHash });
+        if (r2.session_token) setSessionToken(r2.session_token);
+        if (r2.authorized) {
+          const qs2 = r2.session_token ? '?session_token=' + encodeURIComponent(r2.session_token) : '';
+          const me2 = await api.get('/api/me' + qs2);
+          if (me2 && me2.name) { setTgUser(me2); setCheckingTg(false); return; }
+        }
+        // Not authorized — session file gone, need re-auth (can't skip SMS)
+        // But phone is pre-filled so user just clicks Send Code
+      }
+    } catch {}
+    setCheckingTg(false);
   }, []);
 
-  // Handle Slack OAuth callback
+
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const slackToken = params.get('slack_connected');
-    if(slackToken) { setSlackSession(slackToken); window.history.replaceState({},'','/'); }
-  }, []);
+    if (appUser) tryAutoTgLogin();
+  }, [appUser]);
 
-  // Auto-login with stored JWT — bulletproof
-  useEffect(() => {
-    let dead = false;
-    const finish = () => { if (!dead) setChecking(false); };
-    if (showSetup) { finish(); return; }
-    if (!JWT_TOKEN) { finish(); return; }
-    const t = setTimeout(finish, 4000);
-    api.get('/api/auth/me')
-      .then(u => {
-        if (dead) return;
-        clearTimeout(t);
-        setAppUser({username:u.username, role:u.role, id:u.id, company_id:u.company_id||null, company_name:u.company_name||null});
-        if (u.role !== 'superadmin') loadIntegrations();
-      })
-      .catch(() => { if (!dead) { clearTimeout(t); setJwt(''); } })
-      .finally(() => { if (!dead) { clearTimeout(t); setChecking(false); } });
-    return () => { dead = true; clearTimeout(t); };
-  }, [showSetup]);
+  const handleAppLogin = (u) => { setAppUser(u); };
 
-  const handleSetup = () => { setShowSetup(false); if (!JWT_TOKEN) setChecking(false); };
-  const handleLogin = (u) => { setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
-  const handleLogout = () => { setJwt(''); setTgSession(''); setSlackSession(''); setAppUser(null); setSelected([]); setIntegrations(null); };
+  const handleTgAuth = (me) => { setTgUser(me); };
 
-  if(showSetup) return h(SettingsScreen,{onSave:handleSetup});
-  if(checking) return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',gap:12}},
-    h('span',{className:'spinner'}), h('span',{style:{color:'var(--muted)'}},'Loading...'));
-  if(!appUser) return h(F,null,
-    h('div',{style:{position:'fixed',top:16,right:16,zIndex:200}},
-      h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setShowSetup(true)},'Settings')),
-    h(AppLoginPage,{onAuth:handleLogin}));
+  const doLogout = async () => {
+    const tok = getSessionToken();
+    if (tok) {
+      try { await fetch(API_BASE + '/api/logout?session_token=' + encodeURIComponent(tok), {
+        method: 'POST', headers: allHeaders({'Content-Type':'application/json'}), body: '{}'
+      }); } catch {}
+    }
+    clearSessionToken(); localStorage.removeItem('tgb_phone');
+    clearAppToken(); clearAppUserData();
+    setTgUser(null); setAppUser(null); setSelected([]);
+  };
 
-  const tgOk = integrations?.telegram?.connected;
-  const slackOk = integrations?.slack?.connected;
-  const isSuperAdmin = appUser.role === 'superadmin';
-  const isCompanyAdmin = appUser.role === 'company_admin';
+  // Role helpers
+  const isAdmin = appUser?.role === 'admin';
 
-  const navTabs = isSuperAdmin
-    ? [['companies','Companies'],['sa_users','All Users'],['system','System']]
-    : isCompanyAdmin
-    ? [['broadcast','Broadcast'+(selected.length?' ('+selected.length+')':'')],['chats','Chats'],['accounts','Accounts'],['dashboard','Dashboard'],['history','History'],['settings','Settings']]
-    : [['broadcast','Broadcast'+(selected.length?' ('+selected.length+')':'')],['chats','Chats'],['accounts','Accounts'],['dashboard','Dashboard'],['history','History'],['settings','Settings']];
 
-  // Reset tab if current tab is invalid for role
-  useEffect(() => {
-    const validKeys = navTabs.map(t=>t[0]);
-    if (!validKeys.includes(tab)) setTab(validKeys[0]);
-  }, [appUser.role]);
 
-  const roleBadge = isSuperAdmin ? h('span',{className:'badge badge-red',style:{marginRight:6}},'Super Admin')
-    : isCompanyAdmin ? h('span',{className:'badge badge-blue',style:{marginRight:6}},'Admin')
-    : h('span',{className:'badge badge-green',style:{marginRight:6}},'User');
+  // Step 1: app login
+  if (!appUser) return <AppLoginScreen onLogin={handleAppLogin} />;
 
-  const logoSub = isSuperAdmin ? 'SUPER ADMIN'
-    : (tgOk?'TG ':'')+(tgOk&&slackOk?' + ':'')+(slackOk?'Slack ':'')+(!tgOk&&!slackOk?'No integrations':'');
+  // Step 2: Telegram login
+  if (checkingTg) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',gap:12}}>
+      <span className="spinner"/> <span style={{color:'var(--muted)'}}>Connecting...</span>
+    </div>
+  );
+  if (!tgUser) return <LoginPage onAuth={handleTgAuth} appUser={appUser} onAppLogout={()=>{clearAppToken();clearAppUserData();setAppUser(null);}} />;
 
-  return h(F,null,
-    h('div',{className:'header'},
-      h('div',{className:'header-logo'},
-        h('div',{className:'logo-icon'},'B'),
-        h('div',null,
-          h('div',{className:'logo-text'},'Broadcast Service'),
-          h('div',{className:'logo-sub'}, logoSub)
-        )
-      ),
-      h('div',{className:'header-user'},
-        !isSuperAdmin && tgOk && h('span',{className:'badge badge-tg',style:{marginRight:4}},'TG'),
-        !isSuperAdmin && slackOk && h('span',{className:'badge badge-slack',style:{marginRight:4}},'Slack'),
-        roleBadge,
-        h('div',{className:'status-dot'}),
-        h('span',null,appUser.username),
-        appUser.company_name && h('span',{style:{color:'var(--muted)',fontSize:11,marginLeft:4}},'('+appUser.company_name+')'),
-        h('button',{className:'btn btn-secondary btn-sm',onClick:()=>setShowSetup(true),style:{marginLeft:8}},'Backend'),
-        h('button',{className:'btn btn-secondary btn-sm',onClick:handleLogout},'Logout')
-      )
-    ),
-    h('div',{className:'nav'},
-      navTabs.map(([k,l])=>
-        h('button',{key:k,className:'nav-btn'+(tab===k?' active':''),onClick:()=>setTab(k)},l)
-      )
-    ),
-    h('div',{style:{flex:1,overflow:'auto'}},
-      tab==='broadcast' && h(UnifiedBroadcastPage,{selected}),
-      tab==='chats' && h(UnifiedChatsPage,{selected,setSelected}),
-      tab==='accounts' && h(AccountsPage,null),
-      tab==='dashboard' && h(DashboardPage,null),
-      tab==='history' && h(HistoryPage,null),
-      tab==='settings' && h(SettingsPage,{integrations,onRefresh:loadIntegrations,appUser}),
-      tab==='companies' && h(SACompaniesPage,null),
-      tab==='sa_users' && h(SAUsersPage,null),
-      tab==='system' && h(SASystemPage,null)
-    )
+  const navTabs = [
+    ['chats', 'Chats'],
+    ['broadcast', 'Broadcast' + (selected.length ? ` (${selected.length})` : '')],
+    ['history', 'History'],
+    ['settings', '⚙ Settings'],
+  ];
+
+  return (
+    <>
+      <div className="header">
+        <div className="header-logo">
+          <div>
+            <div className="logo-text">Telegram Broadcast</div>
+            <div className="logo-sub">Evoplay User Client</div>
+          </div>
+        </div>
+        <div className="header-user">
+          <div className="status-dot"/>
+          <span style={{fontWeight:600}}>{tgUser.name || tgUser.username}</span>
+          <span style={{
+            fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:10,
+            background: isAdmin ? 'var(--accent)22' : 'var(--surface2)',
+            color: isAdmin ? 'var(--accent)' : 'var(--muted)',
+            border: `1px solid ${isAdmin ? 'var(--accent)44' : 'var(--border)'}`,
+          }}>{appUser.username} · {appUser.role}</span>
+          <span style={{color:'var(--border)'}}>|</span>
+          <button className="btn btn-secondary btn-sm" onClick={()=>setTab('settings')} style={{marginRight:4}}>⚙ Settings</button>
+          <button className="btn btn-secondary btn-sm" onClick={doLogout}>Logout</button>
+        </div>
+      </div>
+      <div className="nav">
+        {navTabs.map(([k,l]) => (
+          <button key={k} className={`nav-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
+        ))}
+      </div>
+      <div style={{flex:1,overflow:'auto'}}>
+        {tab === 'chats' && <ChatsPage selected={selected} setSelected={setSelected} appUser={appUser} />}
+        {tab === 'broadcast' && <BroadcastPage selected={selected} appUser={appUser} />}
+        {tab === 'history' && <HistoryPage appUser={appUser} />}
+        {tab === 'settings' && <SettingsPage appUser={appUser} onLogout={doLogout} />}
+      </div>
+    </>
   );
 }
 
-// Wait for DOM before mounting React
-(document.readyState === 'loading'
-  ? document.addEventListener('DOMContentLoaded', () => ReactDOM.createRoot(document.getElementById('root')).render(h(App)))
-  : ReactDOM.createRoot(document.getElementById('root')).render(h(App)));
+window.__APP_INITIALIZED__ = true;
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
 </html>
