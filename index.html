@@ -1461,18 +1461,26 @@ function App() {
     if(slackToken) { setSlackSession(slackToken); window.history.replaceState({},'','/'); }
   }, []);
 
-  // Auto-login with stored JWT
+  // Auto-login with stored JWT — bulletproof
   useEffect(() => {
-    if(showSetup) { setChecking(false); return; }
-    if(!JWT_TOKEN) { setChecking(false); return; }
-    api.get('/api/auth/me').then(u => {
-      const user = {username:u.username, role:u.role, id:u.id, company_id:u.company_id||null, company_name:u.company_name||null};
-      setAppUser(user);
-      if (u.role !== 'superadmin') loadIntegrations();
-    }).catch(() => { setJwt(''); }).finally(() => setChecking(false));
+    let dead = false;
+    const finish = () => { if (!dead) setChecking(false); };
+    if (showSetup) { finish(); return; }
+    if (!JWT_TOKEN) { finish(); return; }
+    const t = setTimeout(finish, 4000);
+    api.get('/api/auth/me')
+      .then(u => {
+        if (dead) return;
+        clearTimeout(t);
+        setAppUser({username:u.username, role:u.role, id:u.id, company_id:u.company_id||null, company_name:u.company_name||null});
+        if (u.role !== 'superadmin') loadIntegrations();
+      })
+      .catch(() => { if (!dead) { clearTimeout(t); setJwt(''); } })
+      .finally(() => { if (!dead) { clearTimeout(t); setChecking(false); } });
+    return () => { dead = true; clearTimeout(t); };
   }, [showSetup]);
 
-  const handleSetup = () => { setShowSetup(false); setChecking(false); };
+  const handleSetup = () => { setShowSetup(false); if (!JWT_TOKEN) setChecking(false); };
   const handleLogin = (u) => { setAppUser(u); if(u.role !== 'superadmin') loadIntegrations(); };
   const handleLogout = () => { setJwt(''); setTgSession(''); setSlackSession(''); setAppUser(null); setSelected([]); setIntegrations(null); };
 
