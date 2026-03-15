@@ -216,13 +216,13 @@ function getApiBase() {
   return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
 }
 let API_BASE = getApiBase();
-let JWT_TOKEN = sessionStorage.getItem('jwt_token') || '';
-let TG_SESSION = sessionStorage.getItem('tg_session') || '';
-let SLACK_SESSION = sessionStorage.getItem('slack_session') || '';
+let JWT_TOKEN = localStorage.getItem('jwt_token') || sessionStorage.getItem('jwt_token') || '';
+let TG_SESSION = localStorage.getItem('tg_session') || sessionStorage.getItem('tg_session') || '';
+let SLACK_SESSION = localStorage.getItem('slack_session') || sessionStorage.getItem('slack_session') || '';
 
-function setJwt(t) { JWT_TOKEN = t; if(t) sessionStorage.setItem('jwt_token',t); else sessionStorage.removeItem('jwt_token'); }
-function setTgSession(t) { TG_SESSION = t; if(t) sessionStorage.setItem('tg_session',t); else sessionStorage.removeItem('tg_session'); }
-function setSlackSession(t) { SLACK_SESSION = t; if(t) sessionStorage.setItem('slack_session',t); else sessionStorage.removeItem('slack_session'); }
+function setJwt(t) { JWT_TOKEN = t; if(t) { localStorage.setItem('jwt_token',t); sessionStorage.setItem('jwt_token',t); } else { localStorage.removeItem('jwt_token'); sessionStorage.removeItem('jwt_token'); } }
+function setTgSession(t) { TG_SESSION = t; if(t) { localStorage.setItem('tg_session',t); sessionStorage.setItem('tg_session',t); } else { localStorage.removeItem('tg_session'); sessionStorage.removeItem('tg_session'); } }
+function setSlackSession(t) { SLACK_SESSION = t; if(t) { localStorage.setItem('slack_session',t); sessionStorage.setItem('slack_session',t); } else { localStorage.removeItem('slack_session'); sessionStorage.removeItem('slack_session'); } }
 
 function apiHeaders() {
   const h = {'Content-Type':'application/json'};
