@@ -213,7 +213,7 @@ const F = React.Fragment;
 
 // ── API config ──────────────────────────────────────────────────────────────
 function getApiBase() {
-  return sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
+  return localStorage.getItem('api_base') || sessionStorage.getItem('api_base') || 'https://web-production-b8b8b.up.railway.app';
 }
 let API_BASE = getApiBase();
 let JWT_TOKEN = sessionStorage.getItem('jwt_token') || '';
@@ -251,7 +251,7 @@ function SettingsScreen({onSave}) {
     try { const r = await fetch(url.replace(/\/$/,'')+'/health'); if(r.ok) setOk(true); else setErr('Error: '+r.status); }
     catch(e) { setErr('Cannot connect'); } setTesting(false);
   };
-  const save = () => { const c=url.replace(/\/$/,''); sessionStorage.setItem('api_base',c); API_BASE=c; onSave(); };
+  const save = () => { const c=url.replace(/\/$/,''); localStorage.setItem('api_base',c); sessionStorage.setItem('api_base',c); API_BASE=c; onSave(); };
   return h('div',{className:'login-wrap'},
     h('div',{className:'login-hero'}, h('h1',null,'Broadcast Service'), h('p',null,'Enter your backend URL')),
     h('div',{className:'card'},
@@ -1443,7 +1443,7 @@ function App() {
   const [tab, setTab] = useState('broadcast');
   const [selected, setSelected] = useState([]);
   const [integrations, setIntegrations] = useState(null);
-  const [showSetup, setShowSetup] = useState(!sessionStorage.getItem('api_base'));
+  const [showSetup, setShowSetup] = useState(!localStorage.getItem('api_base') && !sessionStorage.getItem('api_base'));
   const [checking, setChecking] = useState(true);
 
   const loadIntegrations = useCallback(async () => {
